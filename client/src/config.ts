@@ -1,0 +1,19 @@
+export const B402_CONFIG = {
+    MERCHANT_ADDRESS: "0xYourBSCWalletAddressHere", // ← GANTI
+    FACILITATOR_URL: "https://facilitator.b402.ai",
+    RELAYER_ADDRESS: "0xE1C2830d5DDd6B49E9c46EbE03a98Cb44CD8eA5a",
+    CHAIN_ID: 56,
+    TOKENS: {
+        USDT: "0x55d398326f99059fF775485246999027B3197955",
+        USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+        BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+    },
+};
+
+export const MINT_CONFIG = {
+    PRICE_PER_TOKEN: 10,      // $10 per token
+    MIN_MINT: 1,
+    MAX_MINT: 100,
+    TOTAL_SUPPLY: 10000,
+    TOKEN_CONTRACT: "0xYourDeployedContractAddress", // ← GANTI DENGAN ALAMAT ERC20 ANDA
+};

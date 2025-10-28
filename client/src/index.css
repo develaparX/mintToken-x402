@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    background-size: 200% 200%;
+  }
+  50% {
+    background-position: 100% 50%;
+    background-size: 200% 200%;
+  }
+}
+
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes glitch {
+  0% {
+    text-shadow: 2px 2px #ff00de, -2px -2px #00fff2;
+  }
+  25% {
+    text-shadow: -2px 2px #ff00de, 2px -2px #00fff2;
+  }
+  50% {
+    text-shadow: 2px -2px #ff00de, -2px 2px #00fff2;
+  }
+  75% {
+    text-shadow: -2px -2px #ff00de, 2px 2px #00fff2;
+  }
+  100% {
+    text-shadow: 2px 2px #ff00de, -2px -2px #00fff2;
+  }
+}
+
+.animate-gradient {
+  animation: gradient-shift 8s ease infinite;
+  background-size: 200% 200%;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 6s ease-in-out infinite;
+}
+
+.glitch-text {
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  animation: glitch 3s infinite;
+  position: relative;
+  letter-spacing: 0.1em;
+}
+
+.glitch-text:hover {
+  animation: glitch 0.3s infinite;
+}
