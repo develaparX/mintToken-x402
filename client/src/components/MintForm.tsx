@@ -43,11 +43,19 @@ export const MintForm = ({
 
   return (
     <>
-      <div className="text-center mb-6">
+      {/* <div className="text-center mb-6">
         <p className="text-sm text-gray-400">
           Tersisa: <strong>{remaining.toLocaleString()}</strong> /{" "}
           {MINT_CONFIG.TOTAL_SUPPLY.toLocaleString()}
         </p>
+      </div> */}
+      <div className="fixed text-center -top-25 ">
+        <h1
+          className="text-7xl md:text-9xl font-black text-white mb-2 glitch-text"
+          style={{ fontFamily: "'Honk', system-ui" }}
+        >
+          MY TOKEN
+        </h1>
       </div>
 
       <div className="bg-black/40 rounded-xl p-4 mb-6">
@@ -65,14 +73,14 @@ export const MintForm = ({
           className="w-full bg-gray-900 border border-purple-500 rounded px-3 py-2 text-white text-center"
         />
         <p className="text-xs text-gray-500 mt-2">
-          Total: ${totalPrice} • Max: {maxAllowed}
+          Min: ${totalPrice} • Max: {maxAllowed} • Total Supply: 10,000 MTK
         </p>
       </div>
 
       <button
         onClick={handleMintClick}
         disabled={mintAmount > remaining}
-        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 py-3 rounded font-bold"
+        className="w-full bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 py-3 rounded font-bold text-white"
       >
         Pay ${totalPrice} & Get Token
       </button>

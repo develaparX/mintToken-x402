@@ -13,11 +13,14 @@ export const MintSuccess = ({
 
   return (
     <div className="text-center py-6">
-      <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="w-20 h-20 bg-linear-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
         <Check className="w-10 h-10 text-white" />
       </div>
-      <h3 className="text-3xl font-bold text-white mb-2 glitch-text">
-        Success! 🎉
+      <h3
+        className="text-3xl font-bold text-white mb-2 glitch-text"
+        style={{ fontFamily: "'Honk', system-ui" }}
+      >
+        Success!
       </h3>
       <p className="text-gray-300 mb-4">
         You received <strong>MyToken</strong>

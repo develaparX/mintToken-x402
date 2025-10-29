@@ -2,41 +2,10 @@ import { useState } from "react";
 import { Wallet, X, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
-import { ethers } from "ethers";
 import { B402_CONFIG } from "../config";
-import { connectWallet, createPaymentAuth, submitPayment } from "../lib/b402";
-import { parseUnits } from "viem";
-// Di bagian atas PaymentModal.tsx
-import {
-  readContract,
-  writeContract,
-  waitForTransactionReceipt,
-} from "wagmi/actions";
-import { wagmiAdapter } from "../main"; // pastikan ini mengekspor wagmiAdapter
-
-// Bisa ditaruh di atas komponen atau di file terpisah seperti `constants/abi.ts`
-const ERC20_ABI = [
-  {
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    name: "allowance",
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "value", type: "uint256" },
-    ],
-    name: "approve",
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
+import { connectWallet } from "../lib/b402";
+import { useTokenApproval } from "../hooks/useTokenApproval";
+import { usePayment } from "../hooks/usePayment";
 
 const tokens = [
   {
@@ -63,109 +32,54 @@ export const PaymentModal = ({
   onClose: () => void;
 }) => {
   const [selectedToken, setSelectedToken] = useState("USDT");
-  const [status, setStatus] = useState<
-    "idle" | "processing" | "success" | "error"
-  >("idle");
-  const [error, setError] = useState("");
-  const [step, setStep] = useState("");
-
   const { address, isConnected } = useAccount();
   const { open } = useAppKit();
+  const { checkAndApprove } = useTokenApproval();
+  const {
+    status,
+    error,
+    step,
+    setStatus,
+    setError,
+    setStep,
+    processPayment,
+    mintToken,
+    resetError,
+  } = usePayment();
 
   const handlePay = async () => {
+    if (!isConnected || !address) {
+      setStep("Opening wallet selector...");
+      await open();
+      return;
+    }
+
     const totalPrice = (mintAmount * 10).toFixed(2);
     const tokenAddr = B402_CONFIG.TOKENS[
       selectedToken as keyof typeof B402_CONFIG.TOKENS
     ] as `0x${string}`;
     const relayerAddr = B402_CONFIG.RELAYER_ADDRESS as `0x${string}`;
     const userAddr = address as `0x${string}`;
-    const amountInWei = parseUnits(totalPrice, 18);
 
     try {
       setStatus("processing");
       setError("");
 
-      if (!isConnected || !address) {
-        setStep("Opening wallet selector...");
-        await open();
-        return;
-      }
-
+      // Step 1: Validate wallet
       setStep("Validating wallet...");
       await connectWallet(address);
 
-      // ✅ Cek allowance
+      // Step 2: Check and approve token
       setStep("Checking token approval...");
-      const allowance = await readContract(wagmiAdapter.wagmiConfig, {
-        address: tokenAddr,
-        abi: [
-          {
-            inputs: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-            ],
-            name: "allowance",
-            outputs: [{ name: "", type: "uint256" }],
-            stateMutability: "view",
-            type: "function",
-          },
-        ],
-        functionName: "allowance",
-        args: [userAddr, relayerAddr],
-      });
+      await checkAndApprove(tokenAddr, userAddr, relayerAddr, totalPrice);
 
-      // ✅ Approve jika perlu
-      if (allowance < amountInWei) {
-        setStep("Approving token for gasless payment...");
-        const hash = await writeContract(wagmiAdapter.wagmiConfig, {
-          address: tokenAddr,
-          abi: [
-            {
-              inputs: [
-                { name: "spender", type: "address" },
-                { name: "value", type: "uint256" },
-              ],
-              name: "approve",
-              outputs: [{ name: "", type: "bool" }],
-              stateMutability: "nonpayable",
-              type: "function",
-            },
-          ],
-          functionName: "approve",
-          args: [relayerAddr, amountInWei],
-        });
-        await waitForTransactionReceipt(wagmiAdapter.wagmiConfig, { hash });
-      }
+      // Step 3: Process payment
+      const txHash = await processPayment(address, tokenAddr, totalPrice);
 
-      // ✅ LANJUT KE PEMBAYARAN
-      setStep("Signing payment...");
-      const auth = await createPaymentAuth(address, tokenAddr, totalPrice);
+      // Step 4: Mint token
+      await mintToken(txHash, address, mintAmount);
 
-      if (!auth?.authorization || !auth.signature || !auth.tokenAddress) {
-        throw new Error("Invalid authorization data");
-      }
-
-      setStep("Processing via B402...");
-      const result = await submitPayment(auth);
-      const txHash = result.transactionHash;
-
-      if (!txHash) {
-        console.error("[B402] Full result:", result);
-        throw new Error("No transaction hash from B402");
-      }
-
-      setStep("Minting your token...");
-      const mintRes = await fetch("http://localhost:3001/mint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash, to: address, amount: mintAmount }),
-      });
-
-      if (!mintRes.ok) {
-        const err = await mintRes.json();
-        throw new Error(err.message || "Mint failed");
-      }
-
+      // Success
       onSuccess({ txHash, address });
       setStatus("success");
       setTimeout(onClose, 2000);
@@ -173,7 +87,7 @@ export const PaymentModal = ({
       console.error("=== PAYMENT ERROR ===", err);
       setError(err.message || "Payment failed");
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 4000);
+      setTimeout(resetError, 4000);
     }
   };
 
@@ -269,7 +183,7 @@ export const PaymentModal = ({
         {isConnected ? (
           <button
             onClick={handlePay}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
+            className="w-full bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
           >
             <Wallet className="w-5 h-5" />
             Pay ${(mintAmount * 10).toFixed(2)} {selectedToken}
@@ -277,7 +191,7 @@ export const PaymentModal = ({
         ) : (
           <button
             onClick={() => open()}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
+            className="w-full bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
           >
             <Wallet className="w-5 h-5" />
             Connect Wallet
