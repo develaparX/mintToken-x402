@@ -30,10 +30,12 @@ const tokens = [
 
 export const PaymentModal = ({
   mintAmount,
+  totalPrice,
   onSuccess,
   onClose,
 }: {
   mintAmount: number;
+  totalPrice: number;
   onSuccess: (data: any) => void;
   onClose: () => void;
 }) => {
@@ -60,7 +62,6 @@ export const PaymentModal = ({
       return;
     }
 
-    const totalPrice = (mintAmount * 10).toFixed(2);
     const tokenAddr = B402_CONFIG.TOKENS[
       selectedToken as keyof typeof B402_CONFIG.TOKENS
     ] as `0x${string}`;
@@ -77,10 +78,19 @@ export const PaymentModal = ({
 
       // Step 2: Check and approve token
       setStep("Checking token approval...");
-      await checkAndApprove(tokenAddr, userAddr, relayerAddr, totalPrice);
+      await checkAndApprove(
+        tokenAddr,
+        userAddr,
+        relayerAddr,
+        totalPrice.toFixed(2)
+      );
 
       // Step 3: Process payment
-      const txHash = await processPayment(address, tokenAddr, totalPrice);
+      const txHash = await processPayment(
+        address,
+        tokenAddr,
+        totalPrice.toFixed(2)
+      );
 
       // Step 4: Mint token
       await mintToken(txHash, address, mintAmount);
@@ -138,9 +148,24 @@ export const PaymentModal = ({
           <X className="w-6 h-6" />
         </button>
 
-        <h3 className="text-white text-xl font-bold mb-4">
+        <h3 className="text-white text-xl font-bold mb-2">
           Choose Payment Token
         </h3>
+
+        <div className="mb-4 p-3 bg-purple-500/20 border border-purple-500 rounded">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-300 text-sm">Amount to pay:</span>
+            <span className="text-white font-bold text-lg">
+              ${totalPrice.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center mt-1">
+            <span className="text-gray-400 text-xs">You'll receive:</span>
+            <span className="text-purple-300 text-sm font-semibold">
+              {mintAmount} tokens
+            </span>
+          </div>
+        </div>
 
         {!isConnected && (
           <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500 rounded flex items-start gap-2">
@@ -192,7 +217,7 @@ export const PaymentModal = ({
             className="w-full bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
           >
             <Wallet className="w-5 h-5" />
-            Pay ${(mintAmount * 10).toFixed(2)} {selectedToken}
+            Pay ${totalPrice.toFixed(2)} {selectedToken}
           </button>
         ) : (
           <button

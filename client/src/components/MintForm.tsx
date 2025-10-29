@@ -8,10 +8,19 @@ export const MintForm = ({
 }: {
   onMintSuccess: (data: any) => void;
 }) => {
-  const [mintAmount, setMintAmount] = useState(1);
+  const [mintAmount, setMintAmount] = useState(0);
+  const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
   const [remaining, setRemaining] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false); // ← Tambahkan state ini
+  const [showModal, setShowModal] = useState(false);
+
+  // Paket pembelian
+  const packages = [
+    { price: 1, tokens: 20 },
+    { price: 5, tokens: 100 },
+    { price: 10, tokens: 200 },
+    { price: 100, tokens: 2000 },
+  ];
 
   useEffect(() => {
     getRemainingSupply()
@@ -19,13 +28,15 @@ export const MintForm = ({
       .finally(() => setLoading(false));
   }, []);
 
-  const handleMintClick = () => {
+  const handlePackageSelect = (pkg: (typeof packages)[0], index: number) => {
     if (remaining === 0) return;
-    if (mintAmount > remaining) {
+    if (pkg.tokens > remaining) {
       alert(`Hanya tersisa ${remaining} token.`);
       return;
     }
-    setShowModal(true); // ← Buka modal saat button diklik
+    setSelectedPackage(index);
+    setMintAmount(pkg.tokens);
+    setShowModal(true);
   };
 
   if (loading)
@@ -38,62 +49,82 @@ export const MintForm = ({
       </div>
     );
 
-  const totalPrice = (mintAmount * MINT_CONFIG.PRICE_PER_TOKEN).toFixed(2);
-  const maxAllowed = Math.min(MINT_CONFIG.MAX_MINT, remaining);
-
   return (
     <>
-      {/* <div className="text-center mb-6">
+      <div className="fixed -top-25 md:-top-15 w-full">
+        <h1
+          className="text-7xl md:text-5xl font-black text-white mb-2 glitch-text"
+          style={{ fontFamily: "'Honk', system-ui" }}
+        >
+          MINT MY TOKEN
+        </h1>
+      </div>
+      {/* 
+      <div className="text-center mb-6">
         <p className="text-sm text-gray-400">
           Tersisa: <strong>{remaining.toLocaleString()}</strong> /{" "}
           {MINT_CONFIG.TOTAL_SUPPLY.toLocaleString()}
         </p>
-      </div> */}
-      <div className="fixed -top-25 w-full">
-        <h1
-          className="text-7xl md:text-9xl font-black text-white mb-2 glitch-text"
-          style={{ fontFamily: "'Honk', system-ui" }}
-        >
-          MY TOKEN
-        </h1>
-      </div>
-
-      <div className="bg-black/40 rounded-xl p-4 mb-6">
-        <input
-          type="number"
-          min={MINT_CONFIG.MIN_MINT}
-          max={maxAllowed}
-          value={mintAmount}
-          onChange={(e) => {
-            const v = parseInt(e.target.value);
-            if (!isNaN(v) && v >= MINT_CONFIG.MIN_MINT && v <= maxAllowed) {
-              setMintAmount(v);
-            }
-          }}
-          className="w-full bg-gray-900 border border-purple-500 rounded px-3 py-2 text-white text-center"
-        />
-        <p className="text-xs text-gray-500 mt-2">
-          Min: ${totalPrice} • Max: {maxAllowed} • Total Supply: 10,000 MTK
+        <p className="text-xs text-purple-400 mt-2">
+          Pilih paket pembelian di bawah
         </p>
+      </div> */}
+
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {packages.map((pkg, index) => {
+          const isDisabled = pkg.tokens > remaining;
+          return (
+            <button
+              key={index}
+              onClick={() => handlePackageSelect(pkg, index)}
+              disabled={isDisabled}
+              className={`
+                relative bg-gradient-to-br from-purple-900/50 to-blue-900/50 
+                border rounded-md p-3 transition-all duration-300
+                ${
+                  isDisabled
+                    ? "opacity-40 cursor-not-allowed border-gray-600"
+                    : "border-purple-500 hover:border-purple-400 hover:scale-[1.02] hover:shadow-md hover:shadow-purple-500/50"
+                }
+              `}
+            >
+              {isDisabled && (
+                <div className="absolute top-1 right-1 bg-red-500 text-white text-[9px] px-1 py-0.5 rounded-sm">
+                  Habis
+                </div>
+              )}
+              <div className="text-xl font-bold text-white mb-0.5">
+                ${pkg.price}
+              </div>
+              <div className="text-[11px] text-gray-300">
+                {pkg.tokens} Tokens
+              </div>
+              <div className="text-[9px] text-purple-300 mt-0.5">
+                ${(pkg.price / pkg.tokens).toFixed(3)}/token
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      <button
-        onClick={handleMintClick}
-        disabled={mintAmount > remaining}
-        className="w-full bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 py-3 rounded font-bold text-white"
-      >
-        Pay ${totalPrice} & Get Token
-      </button>
+      <div className="text-center text-xs text-gray-500">
+        💳 Pembayaran menggunakan USDT/USDC/USD1 via B402 Protocol
+      </div>
 
-      {/* Modal hanya muncul jika showModal = true */}
-      {showModal && (
+      {/* Modal payment */}
+      {showModal && selectedPackage !== null && (
         <PaymentModal
           mintAmount={mintAmount}
+          totalPrice={packages[selectedPackage].price}
           onSuccess={(data) => {
             onMintSuccess(data);
-            setShowModal(false); // Tutup modal setelah success
+            setShowModal(false);
+            setSelectedPackage(null);
           }}
-          onClose={() => setShowModal(false)} // Tutup modal saat X diklik
+          onClose={() => {
+            setShowModal(false);
+            setSelectedPackage(null);
+          }}
         />
       )}
     </>
