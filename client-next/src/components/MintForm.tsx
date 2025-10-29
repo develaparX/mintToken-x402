@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { getRemainingSupply } from "../lib/supply";
+import { getRemainingSupply } from "@/lib/supply";
 import { PaymentModal } from "./PaymentModal";
 
 export const MintForm = ({
@@ -58,16 +60,6 @@ export const MintForm = ({
           MINT MY TOKEN
         </h1>
       </div>
-      {/* 
-      <div className="text-center mb-6">
-        <p className="text-sm text-gray-400">
-          Tersisa: <strong>{remaining.toLocaleString()}</strong> /{" "}
-          {MINT_CONFIG.TOTAL_SUPPLY.toLocaleString()}
-        </p>
-        <p className="text-xs text-purple-400 mt-2">
-          Pilih paket pembelian di bawah
-        </p>
-      </div> */}
 
       <div className="grid grid-cols-2 gap-2 mb-4">
         {packages.map((pkg, index) => {
