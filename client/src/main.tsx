@@ -12,9 +12,9 @@ import App from "./App.tsx";
 // 1. Setup QueryClient
 const queryClient = new QueryClient();
 
-// 2. Project ID dari Reown Cloud (https://cloud.reown.com)
-const projectId =
-  import.meta.env.VITE_PROJECT_ID || "c80c04ae7e39825387b6e2b9f8dd6fbe";
+// 2. Project ID dari Reown Cloud (https://cloud.reown.com) - Hardcoded untuk testing
+const projectId = "a1b2c3d4e5f6789012345678901234567890abcd";
+console.log("🔍 DEBUG: Project ID =", projectId);
 
 // 3. Chains (konversi dari readonly ke mutable)
 const networks: [AppKitNetwork, ...AppKitNetwork[]] = [bsc];
@@ -34,8 +34,8 @@ createAppKit({
   metadata: {
     name: "MyToken Mint",
     description: "Mint MyToken with B402 Payment",
-    url: "https://yourdomain.com",
-    icons: ["https://yourdomain.com/icon.png"],
+    url: window.location.origin,
+    icons: [`${window.location.origin}/favicon.ico`],
   },
   themeMode: "dark",
   features: {
