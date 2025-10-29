@@ -13,8 +13,7 @@ import App from "./App.tsx";
 const queryClient = new QueryClient();
 
 // 2. Project ID dari Reown Cloud (https://cloud.reown.com) - Hardcoded untuk testing
-const projectId = "a1b2c3d4e5f6789012345678901234567890abcd";
-console.log("🔍 DEBUG: Project ID =", projectId);
+const projectId = import.meta.env.VITE_PROJECT_ID;
 
 // 3. Chains (konversi dari readonly ke mutable)
 const networks: [AppKitNetwork, ...AppKitNetwork[]] = [bsc];

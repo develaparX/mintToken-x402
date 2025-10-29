@@ -49,7 +49,7 @@ export const MintForm = ({
           {MINT_CONFIG.TOTAL_SUPPLY.toLocaleString()}
         </p>
       </div> */}
-      <div className="fixed text-center -top-25 ">
+      <div className="fixed -top-25 w-full">
         <h1
           className="text-7xl md:text-9xl font-black text-white mb-2 glitch-text"
           style={{ fontFamily: "'Honk', system-ui" }}

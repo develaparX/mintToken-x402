@@ -32,7 +32,9 @@ export const usePayment = () => {
 
     const mintToken = async (txHash: string, address: string, amount: number) => {
         setStep("Minting your token...");
-        const mintRes = await fetch("http://localhost:3001/mint", {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+        const mintRes = await fetch(`${API_URL}/mint`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ txHash, to: address, amount }),
