@@ -12,12 +12,9 @@ export const MintSuccess = ({
   const copy = (text: string) => navigator.clipboard.writeText(text);
 
   return (
-    <div className="text-center py-6">
-      <div className="w-20 h-20 bg-linear-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Check className="w-10 h-10 text-white" />
-      </div>
+    <div className="text-center py-3">
       <h3
-        className="text-3xl font-bold text-white mb-2 glitch-text"
+        className="text-6xl font-bold text-white mb-10 glitch-text"
         style={{ fontFamily: "'Honk', system-ui" }}
       >
         Success!

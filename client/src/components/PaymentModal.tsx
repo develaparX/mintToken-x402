@@ -20,6 +20,12 @@ const tokens = [
     color: "bg-blue-500",
     icon: "⓿",
   },
+  {
+    name: "USD1",
+    address: B402_CONFIG.TOKENS.USD1,
+    color: "bg-blue-500",
+    icon: "$1",
+  },
 ];
 
 export const PaymentModal = ({
