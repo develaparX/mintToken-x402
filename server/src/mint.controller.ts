@@ -1,26 +1,37 @@
-import { Controller, Post, Body, HttpException } from '@nestjs/common';
-import { isAddress } from 'ethers';
+// mint.controller.ts
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { MintService } from './mint.service';
 
 @Controller('mint')
 export class MintController {
-    constructor(private mintService: MintService) { }
+    constructor(private readonly mintService: MintService) { }
+
+    @Get('health')
+    async health() {
+        const balance = await this.mintService.getWalletBalance();
+        return {
+            status: 'ok',
+            walletBalance: balance + ' BNB',
+        };
+    }
 
     @Post()
-    async mint(@Body() body: any) {
-        const { txHash, to, amount } = body; // amount = jumlah token (1, 5, 100)
+    async mint(@Body() body: { txHash: string; to: string; amount: number }) {
+        const isValid = await this.mintService.verifyTx(body.txHash);
 
-        if (!isAddress(to)) throw new HttpException('Invalid address', 400);
-        if (amount < 1 || amount > 100) throw new HttpException('Amount must be 1–100', 400);
-
-        const valid = await this.mintService.verifyTx(txHash);
-        if (!valid) throw new HttpException('Invalid transaction', 400);
-
-        try {
-            await this.mintService.mintIfAvailable(to, amount);
-            return { success: true };
-        } catch (err: any) {
-            throw new HttpException(err.message, 400);
+        if (!isValid) {
+            throw new Error('Invalid transaction');
         }
+
+        const mintTxHash = await this.mintService.mintIfAvailable(
+            body.to,
+            body.amount
+        );
+
+        return {
+            success: true,
+            mintTxHash,
+            message: `Minted ${body.amount} tokens`,
+        };
     }
 }

@@ -1,7 +1,42 @@
 import { useState } from "react";
 import { Wallet, X, Check, AlertCircle, Loader2 } from "lucide-react";
+import { useAccount } from "wagmi";
+import { useAppKit } from "@reown/appkit/react";
+import { ethers } from "ethers";
 import { B402_CONFIG } from "../config";
 import { connectWallet, createPaymentAuth, submitPayment } from "../lib/b402";
+import { parseUnits } from "viem";
+// Di bagian atas PaymentModal.tsx
+import {
+  readContract,
+  writeContract,
+  waitForTransactionReceipt,
+} from "wagmi/actions";
+import { wagmiAdapter } from "../main"; // pastikan ini mengekspor wagmiAdapter
+
+// Bisa ditaruh di atas komponen atau di file terpisah seperti `constants/abi.ts`
+const ERC20_ABI = [
+  {
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    name: "allowance",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+    ],
+    name: "approve",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 
 const tokens = [
   {
@@ -15,12 +50,6 @@ const tokens = [
     address: B402_CONFIG.TOKENS.USDC,
     color: "bg-blue-500",
     icon: "⓿",
-  },
-  {
-    name: "BUSD",
-    address: B402_CONFIG.TOKENS.BUSD,
-    color: "bg-yellow-500",
-    icon: "Ⓑ",
   },
 ];
 
@@ -39,40 +68,92 @@ export const PaymentModal = ({
   >("idle");
   const [error, setError] = useState("");
   const [step, setStep] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
+
+  const { address, isConnected } = useAccount();
+  const { open } = useAppKit();
 
   const handlePay = async () => {
     const totalPrice = (mintAmount * 10).toFixed(2);
+    const tokenAddr = B402_CONFIG.TOKENS[
+      selectedToken as keyof typeof B402_CONFIG.TOKENS
+    ] as `0x${string}`;
+    const relayerAddr = B402_CONFIG.RELAYER_ADDRESS as `0x${string}`;
+    const userAddr = address as `0x${string}`;
+    const amountInWei = parseUnits(totalPrice, 18);
+
     try {
       setStatus("processing");
       setError("");
-      setStep("Connecting wallet...");
 
-      const address = await connectWallet();
-      if (!address) throw new Error("Wallet connection failed");
-      setWalletAddress(address);
+      if (!isConnected || !address) {
+        setStep("Opening wallet selector...");
+        await open();
+        return;
+      }
 
+      setStep("Validating wallet...");
+      await connectWallet(address);
+
+      // ✅ Cek allowance
+      setStep("Checking token approval...");
+      const allowance = await readContract(wagmiAdapter.wagmiConfig, {
+        address: tokenAddr,
+        abi: [
+          {
+            inputs: [
+              { name: "owner", type: "address" },
+              { name: "spender", type: "address" },
+            ],
+            name: "allowance",
+            outputs: [{ name: "", type: "uint256" }],
+            stateMutability: "view",
+            type: "function",
+          },
+        ],
+        functionName: "allowance",
+        args: [userAddr, relayerAddr],
+      });
+
+      // ✅ Approve jika perlu
+      if (allowance < amountInWei) {
+        setStep("Approving token for gasless payment...");
+        const hash = await writeContract(wagmiAdapter.wagmiConfig, {
+          address: tokenAddr,
+          abi: [
+            {
+              inputs: [
+                { name: "spender", type: "address" },
+                { name: "value", type: "uint256" },
+              ],
+              name: "approve",
+              outputs: [{ name: "", type: "bool" }],
+              stateMutability: "nonpayable",
+              type: "function",
+            },
+          ],
+          functionName: "approve",
+          args: [relayerAddr, amountInWei],
+        });
+        await waitForTransactionReceipt(wagmiAdapter.wagmiConfig, { hash });
+      }
+
+      // ✅ LANJUT KE PEMBAYARAN
       setStep("Signing payment...");
-      const tokenAddr =
-        B402_CONFIG.TOKENS[selectedToken as keyof typeof B402_CONFIG.TOKENS];
       const auth = await createPaymentAuth(address, tokenAddr, totalPrice);
 
-      setStep("Processing via B402...");
-      const payload = {
-        from: auth.authorization.from,
-        to: auth.authorization.to,
-        value: auth.authorization.value,
-        validAfter: auth.authorization.validAfter,
-        validBefore: auth.authorization.validBefore,
-        nonce: auth.authorization.nonce,
-        signature: auth.signature,
-        token: auth.tokenAddress,
-      };
+      if (!auth?.authorization || !auth.signature || !auth.tokenAddress) {
+        throw new Error("Invalid authorization data");
+      }
 
-      const result = await submitPayment(payload);
+      setStep("Processing via B402...");
+      const result = await submitPayment(auth);
       const txHash = result.transactionHash;
 
-      // 🔥 Kirim ke backend untuk mint
+      if (!txHash) {
+        console.error("[B402] Full result:", result);
+        throw new Error("No transaction hash from B402");
+      }
+
       setStep("Minting your token...");
       const mintRes = await fetch("http://localhost:3001/mint", {
         method: "POST",
@@ -89,6 +170,7 @@ export const PaymentModal = ({
       setStatus("success");
       setTimeout(onClose, 2000);
     } catch (err: any) {
+      console.error("=== PAYMENT ERROR ===", err);
       setError(err.message || "Payment failed");
       setStatus("error");
       setTimeout(() => setStatus("idle"), 4000);
@@ -121,15 +203,33 @@ export const PaymentModal = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md relative">
+    <div
+      className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-900 rounded-2xl p-6 w-full max-w-md relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-white"
+          className="absolute top-4 right-4 text-gray-500 hover:text-white transition z-10"
         >
           <X className="w-6 h-6" />
         </button>
-        <h3 className="text-white text-xl font-bold mb-4">Choose Token</h3>
+
+        <h3 className="text-white text-xl font-bold mb-4">
+          Choose Payment Token
+        </h3>
+
+        {!isConnected && (
+          <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500 rounded flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5" />
+            <span className="text-blue-300 text-sm">
+              Please connect your wallet first
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded flex items-start gap-2">
@@ -143,10 +243,10 @@ export const PaymentModal = ({
             <button
               key={t.name}
               onClick={() => setSelectedToken(t.name)}
-              className={`w-full p-3 rounded-xl border ${
+              className={`w-full p-3 rounded-xl border transition ${
                 selectedToken === t.name
                   ? "border-purple-500 bg-purple-500/20"
-                  : "border-gray-700 bg-gray-800"
+                  : "border-gray-700 bg-gray-800 hover:border-gray-600"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -156,7 +256,7 @@ export const PaymentModal = ({
                   >
                     {t.icon}
                   </div>
-                  <span className="text-white">{t.name}</span>
+                  <span className="text-white font-medium">{t.name}</span>
                 </div>
                 {selectedToken === t.name && (
                   <Check className="w-5 h-5 text-purple-400" />
@@ -166,13 +266,23 @@ export const PaymentModal = ({
           ))}
         </div>
 
-        <button
-          onClick={handlePay}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"
-        >
-          <Wallet className="w-5 h-5" />
-          Pay ${(mintAmount * 10).toFixed(2)} {selectedToken}
-        </button>
+        {isConnected ? (
+          <button
+            onClick={handlePay}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
+          >
+            <Wallet className="w-5 h-5" />
+            Pay ${(mintAmount * 10).toFixed(2)} {selectedToken}
+          </button>
+        ) : (
+          <button
+            onClick={() => open()}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
+          >
+            <Wallet className="w-5 h-5" />
+            Connect Wallet
+          </button>
+        )}
       </div>
     </div>
   );

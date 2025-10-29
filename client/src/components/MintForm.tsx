@@ -9,8 +9,9 @@ export const MintForm = ({
   onMintSuccess: (data: any) => void;
 }) => {
   const [mintAmount, setMintAmount] = useState(1);
-  const [remaining, setRemaining] = useState<number | 0>(0);
+  const [remaining, setRemaining] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false); // ← Tambahkan state ini
 
   useEffect(() => {
     getRemainingSupply()
@@ -19,15 +20,17 @@ export const MintForm = ({
   }, []);
 
   const handleMintClick = () => {
-    if (remaining === null) return;
+    if (remaining === 0) return;
     if (mintAmount > remaining) {
       alert(`Hanya tersisa ${remaining} token.`);
       return;
     }
+    setShowModal(true); // ← Buka modal saat button diklik
   };
 
   if (loading)
     return <div className="text-center py-10 text-white">Loading...</div>;
+
   if (remaining === 0)
     return (
       <div className="text-center py-10 text-red-400 font-bold glitch-text">
@@ -68,17 +71,21 @@ export const MintForm = ({
 
       <button
         onClick={handleMintClick}
-        disabled={mintAmount > remaining!}
+        disabled={mintAmount > remaining}
         className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 py-3 rounded font-bold"
       >
         Pay ${totalPrice} & Get Token
       </button>
 
-      {mintAmount <= (remaining || 0) && (
+      {/* Modal hanya muncul jika showModal = true */}
+      {showModal && (
         <PaymentModal
           mintAmount={mintAmount}
-          onSuccess={onMintSuccess}
-          onClose={() => {}}
+          onSuccess={(data) => {
+            onMintSuccess(data);
+            setShowModal(false); // Tutup modal setelah success
+          }}
+          onClose={() => setShowModal(false)} // Tutup modal saat X diklik
         />
       )}
     </>
