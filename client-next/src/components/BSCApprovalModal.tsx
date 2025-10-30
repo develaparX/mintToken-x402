@@ -74,8 +74,8 @@ export const BSCApprovalModal = ({
         throw new Error(`Please switch to account ${approvalData.userAddress}`);
       }
 
-      // Create USDT contract instance
-      const usdtContract = new ethers.Contract(
+      // Create token contract instance
+      const tokenContract = new ethers.Contract(
         approvalData.tokenAddress,
         [
           "function approve(address spender, uint256 amount) external returns (bool)",
@@ -85,8 +85,8 @@ export const BSCApprovalModal = ({
       );
 
       // Execute approval transaction
-      console.log("Approving USDT spending...");
-      const approveTx = await usdtContract.approve(
+      console.log(`Approving ${approvalData.tokenSymbol} spending...`);
+      const approveTx = await tokenContract.approve(
         approvalData.facilitatorAddress,
         approvalData.requiredPaymentWei
       );
@@ -98,7 +98,7 @@ export const BSCApprovalModal = ({
       console.log("Approval confirmed in block:", receipt.blockNumber);
 
       // Verify approval was successful
-      const newAllowance = await usdtContract.allowance(
+      const newAllowance = await tokenContract.allowance(
         approvalData.userAddress,
         approvalData.facilitatorAddress
       );
@@ -146,8 +146,8 @@ export const BSCApprovalModal = ({
               </span>
             </div>
             <p className="text-blue-200 text-sm">
-              Approve the facilitator to spend your USDT. After approval, all
-              future payments will be gasless!
+              Approve the facilitator to spend your {approvalData.tokenSymbol}.
+              After approval, all future payments will be gasless!
             </p>
           </div>
 
@@ -189,9 +189,10 @@ export const BSCApprovalModal = ({
             {!approvalData.hasSufficientBalance && (
               <div className="bg-red-900/20 border border-red-500/30 rounded p-3">
                 <div className="text-red-300 text-sm">
-                  ⚠️ Insufficient USDT balance. You need{" "}
-                  {approvalData.requiredPayment} USDT but only have{" "}
-                  {approvalData.userBalance} USDT.
+                  ⚠️ Insufficient {approvalData.tokenSymbol} balance. You need{" "}
+                  {approvalData.requiredPayment} {approvalData.tokenSymbol} but
+                  only have {approvalData.userBalance}{" "}
+                  {approvalData.tokenSymbol}.
                 </div>
               </div>
             )}

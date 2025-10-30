@@ -13,14 +13,15 @@ const USDT_ABI = [
 // MyToken Contract ABI
 const MYTOKEN_ABI = [
     "function purchaseTokensGasless(address buyer, uint256 tokenAmount, address paymentToken, uint256 paymentAmount) external",
-    "function calculatePayment(uint256 tokenAmount, address paymentToken) external view returns (uint256)"
+    "function calculatePayment(uint256 tokenAmount, address paymentToken) external view returns (uint256)",
+    "function addPaymentToken(address token, uint8 decimals) external",
+    "function isPaymentTokenAccepted(address token) external view returns (bool)"
 ];
 
-// Token addresses on BSC
 const TOKEN_ADDRESSES = {
-    USDT: "0x55d398326f99059fF775485246999027B3197955",
-    USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    USD1: "0x55d398326f99059fF775485246999027B3197955"
+    USDT: "0x55d398326f99059fF775485246999027B3197955", // Tether USD
+    USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", // USD Coin  
+    USD1: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"  // World Liberty Financial USD
 };
 
 export async function POST(request: NextRequest) {
@@ -66,19 +67,38 @@ export async function POST(request: NextRequest) {
         const myTokenContract = new ethers.Contract(contractAddress, MYTOKEN_ABI, facilitatorWallet);
         const usdtContract = new ethers.Contract(paymentTokenAddress, USDT_ABI, facilitatorWallet);
 
+        // Auto-setup USD1 if not already accepted and this is USD1 request
+        if (tokenSymbol === 'USD1') {
+            const isUSD1Accepted = await myTokenContract.isPaymentTokenAccepted(paymentTokenAddress);
+            if (!isUSD1Accepted) {
+                console.log('USD1 not accepted, adding to contract...');
+                try {
+                    const addTokenTx = await myTokenContract.addPaymentToken(paymentTokenAddress, 18);
+                    await addTokenTx.wait();
+                    console.log('USD1 successfully added as payment token:', addTokenTx.hash);
+                } catch (addError: any) {
+                    console.error('Failed to add USD1 as payment token:', addError);
+                    return NextResponse.json(
+                        { error: `USD1 not accepted as payment token and failed to add: ${addError.message}` },
+                        { status: 400 }
+                    );
+                }
+            }
+        }
+
         // Convert token amount to wei
         const tokenAmountWei = ethers.parseEther(tokenAmount.toString());
 
         // Calculate required payment amount
         const requiredPayment = await myTokenContract.calculatePayment(tokenAmountWei, paymentTokenAddress);
 
-        console.log(`Processing gasless payment: ${tokenAmount} MTK for ${ethers.formatEther(requiredPayment)} USDT`);
+        console.log(`Processing gasless payment: ${tokenAmount} MTK for ${ethers.formatEther(requiredPayment)} ${tokenSymbol}`);
 
         // Verify user has sufficient balance
         const userBalance = await usdtContract.balanceOf(userAddress);
         if (userBalance < requiredPayment) {
             return NextResponse.json(
-                { error: `Insufficient USDT balance. Required: ${ethers.formatEther(requiredPayment)}, Available: ${ethers.formatEther(userBalance)}` },
+                { error: `Insufficient ${tokenSymbol} balance. Required: ${ethers.formatEther(requiredPayment)}, Available: ${ethers.formatEther(userBalance)}` },
                 { status: 400 }
             );
         }
@@ -101,15 +121,15 @@ export async function POST(request: NextRequest) {
 
         console.log('Sufficient allowance found:', ethers.formatEther(allowance));
 
-        // Step 1: Transfer USDT from user to facilitator (facilitator pays gas)
-        console.log('Transferring USDT...');
+        // Step 1: Transfer payment token from user to facilitator (facilitator pays gas)
+        console.log(`Transferring ${tokenSymbol}...`);
         const transferTx = await usdtContract.transferFrom(
             userAddress,
             facilitatorWallet.address,
             requiredPayment
         );
         await transferTx.wait();
-        console.log('USDT transferred:', transferTx.hash);
+        console.log(`${tokenSymbol} transferred:`, transferTx.hash);
 
         // Step 2: Mint tokens to user (facilitator pays gas)
         console.log('Minting tokens...');
@@ -212,22 +232,41 @@ export async function GET(request: NextRequest) {
         const tokenAmountWei = ethers.parseEther(tokenAmount);
         const requiredPayment = await myTokenContract.calculatePayment(tokenAmountWei, paymentTokenAddress);
 
+        // Get token decimals first
+        const decimals = await usdtContract.decimals();
+        console.log(`Token ${tokenSymbol} decimals:`, decimals);
+        console.log(`Token address: ${paymentTokenAddress}`);
+        console.log(`User address: ${userAddress}`);
+
         // Check current allowance and balance
         const [allowance, balance] = await Promise.all([
             usdtContract.allowance(userAddress, facilitatorWallet.address),
             usdtContract.balanceOf(userAddress)
         ]);
 
+        console.log(`Raw balance: ${balance.toString()}`);
+        console.log(`Raw allowance: ${allowance.toString()}`);
+        console.log(`Required payment (wei): ${requiredPayment.toString()}`);
+
+        // Format using correct decimals
+        const formattedBalance = ethers.formatUnits(balance, decimals);
+        const formattedAllowance = ethers.formatUnits(allowance, decimals);
+        const formattedRequiredPayment = ethers.formatUnits(requiredPayment, decimals);
+
+        console.log(`Formatted balance: ${formattedBalance} ${tokenSymbol}`);
+        console.log(`Formatted required: ${formattedRequiredPayment} ${tokenSymbol}`);
+
         const approvalData = {
             userAddress,
             facilitatorAddress: facilitatorWallet.address,
             tokenAddress: paymentTokenAddress,
             tokenSymbol,
-            requiredPayment: ethers.formatEther(requiredPayment),
+            decimals: Number(decimals), // Convert to number
+            requiredPayment: formattedRequiredPayment,
             requiredPaymentWei: requiredPayment.toString(),
-            currentAllowance: ethers.formatEther(allowance),
+            currentAllowance: formattedAllowance,
             currentAllowanceWei: allowance.toString(),
-            userBalance: ethers.formatEther(balance),
+            userBalance: formattedBalance,
             userBalanceWei: balance.toString(),
             needsApproval: allowance < requiredPayment,
             hasSufficientBalance: balance >= requiredPayment

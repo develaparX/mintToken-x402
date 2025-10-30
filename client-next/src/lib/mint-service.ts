@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import MyTokenABI from '../MyToken.json';
 
 export enum MintType {
     AIRDROP = 'airdrop',
@@ -8,269 +7,191 @@ export enum MintType {
     PUBLIC = 'public'
 }
 
+// MyToken Contract ABI
+const MYTOKEN_ABI = [
+    "function mintAirdrop(address to, uint256 amount) external",
+    "function mintBayc(address to, uint256 amount) external",
+    "function mintLiquidity(address to, uint256 amount) external",
+    "function disableMinting() external",
+    "function getRemainingAllocations() external view returns (uint256, uint256, uint256, uint256)",
+    "function getDistributionStatus() external view returns (uint256, uint256, uint256, uint256, uint256)",
+    "function mintingEnabled() external view returns (bool)",
+    "function publicSaleEnabled() external view returns (bool)",
+    "function owner() external view returns (address)"
+];
+
 export class MintService {
-    private contract!: ethers.Contract;
-    private wallet!: ethers.Wallet;
-    private provider!: ethers.JsonRpcProvider;
-    private initialized = false;
-
-    private readonly RPC_ENDPOINTS = [
-        'https://bnb-mainnet.g.alchemy.com/v2/SptCeh5drtGyD5VGgFzYY',
-        'https://bsc-dataseed1.binance.org',
-        'https://bsc-dataseed.bnbchain.org',
-        'https://rpc.ankr.com/bsc',
-        'https://bsc-dataseed2.binance.org',
-    ];
-
-    private readonly ALLOCATIONS = {
-        AIRDROP: 50_000,
-        BAYC: 50_000,
-        LIQUIDITY: 200_000,
-        PUBLIC: 700_000,
-        TOTAL: 1_000_000
-    };
+    private provider: ethers.JsonRpcProvider;
+    private contract: ethers.Contract;
+    private wallet: ethers.Wallet;
 
     constructor() {
-        // Don't initialize immediately to avoid blocking API routes
-        // Initialize lazily when first method is called
-    }
-
-    private async initializeProvider() {
-        const pk = process.env.PRIVATE_KEY;
-        const addr = process.env.MINT_CONTRACT_ADDRESS;
-
-        if (!pk || !addr) {
-            throw new Error('Missing PRIVATE_KEY or MINT_CONTRACT_ADDRESS in environment');
+        if (!process.env.BSC_RPC_URL || !process.env.CONTRACT_ADDRESS || !process.env.FACILITATOR_PRIVATE_KEY) {
+            throw new Error('Missing required environment variables');
         }
 
-        for (const rawUrl of this.RPC_ENDPOINTS) {
-            const rpcUrl = rawUrl.trim();
-            if (!rpcUrl) continue;
-
-            try {
-                this.provider = new ethers.JsonRpcProvider(
-                    rpcUrl,
-                    { name: 'bsc', chainId: 56 },
-                    { staticNetwork: true, batchMaxCount: 1 }
-                );
-
-                await this.provider.getBlockNumber();
-                this.wallet = new ethers.Wallet(pk, this.provider);
-
-                // Use imported ABI
-                this.contract = new ethers.Contract(addr, MyTokenABI.abi, this.wallet);
-
-                console.log(`✅ Connected via: ${this.maskUrl(rpcUrl)}`);
-                return;
-            } catch (error: any) {
-                console.warn(`❌ Failed with ${this.maskUrl(rpcUrl)}: ${error.message}`);
-            }
-        }
-        throw new Error('All RPC endpoints failed');
+        this.provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL);
+        this.wallet = new ethers.Wallet(process.env.FACILITATOR_PRIVATE_KEY, this.provider);
+        this.contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, MYTOKEN_ABI, this.wallet);
     }
 
-    private maskUrl(url: string): string {
-        return url.replace(/\/v2\/[^/]+$/, '/v2/***');
+    async mintAirdrop(to: string, amount: string): Promise<string> {
+        const amountWei = ethers.parseEther(amount);
+        const tx = await this.contract.mintAirdrop(to, amountWei);
+        await tx.wait();
+        return tx.hash;
     }
 
-    private async ensureInitialized(): Promise<void> {
-        if (!this.initialized) {
-            await this.initializeProvider();
-            this.initialized = true;
-        }
+    async mintBayc(to: string, amount: string): Promise<string> {
+        const amountWei = ethers.parseEther(amount);
+        const tx = await this.contract.mintBayc(to, amountWei);
+        await tx.wait();
+        return tx.hash;
     }
 
-    private async retryRpcCall<T>(
-        operation: () => Promise<T>,
-        maxRetries = 3,
-        delayMs = 2000
-    ): Promise<T> {
-        await this.ensureInitialized();
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                return await operation();
-            } catch (error: any) {
-                if (attempt === maxRetries) throw error;
-                console.warn(`Retry ${attempt}/${maxRetries}: ${error.message}`);
-                await new Promise(resolve => setTimeout(resolve, delayMs));
-            }
-        }
-        throw new Error('Max retries exceeded');
+    async mintLiquidity(to: string, amount: string): Promise<string> {
+        const amountWei = ethers.parseEther(amount);
+        const tx = await this.contract.mintLiquidity(to, amountWei);
+        await tx.wait();
+        return tx.hash;
     }
 
-    private async getGasPrice(): Promise<bigint> {
-        const feeData = await this.provider.getFeeData();
-        if (feeData.gasPrice) return feeData.gasPrice;
-        return await this.getGasPrice();
+    async disableMinting(): Promise<string> {
+        const tx = await this.contract.disableMinting();
+        await tx.wait();
+        return tx.hash;
     }
 
-    private validateMintAmount(type: MintType, amount: number) {
-        if (amount <= 0) {
-            throw new Error('Amount must be greater than 0');
-        }
-
-        switch (type) {
-            case MintType.AIRDROP:
-                if (amount > 1000) {
-                    throw new Error('Max 1,000 tokens per airdrop');
-                }
-                break;
-            case MintType.BAYC:
-                if (amount > 5000) {
-                    throw new Error('Max 5,000 tokens per BAYC mint');
-                }
-                break;
-            case MintType.LIQUIDITY:
-                if (amount > this.ALLOCATIONS.LIQUIDITY) {
-                    throw new Error('Exceeds liquidity allocation');
-                }
-                break;
-            case MintType.PUBLIC:
-                if (amount < 1) {
-                    throw new Error('Min 1 token for public mint');
-                }
-                if (amount > 10_000) {
-                    throw new Error('Max 10,000 tokens per public mint');
-                }
-                break;
-        }
+    async getRemainingAllocations(): Promise<{
+        airdrop: string;
+        bayc: string;
+        liquidity: string;
+        public: string;
+    }> {
+        const [airdrop, bayc, liquidity, publicRemaining] = await this.contract.getRemainingAllocations();
+        return {
+            airdrop: ethers.formatEther(airdrop),
+            bayc: ethers.formatEther(bayc),
+            liquidity: ethers.formatEther(liquidity),
+            public: ethers.formatEther(publicRemaining)
+        };
     }
 
-    async mint(type: MintType, to: string, amountTokens: number): Promise<string> {
-        this.validateMintAmount(type, amountTokens);
+    async getDistributionStatus(): Promise<{
+        totalMinted: string;
+        airdropProgress: number;
+        baycProgress: number;
+        liquidityProgress: number;
+        publicProgress: number;
+    }> {
+        const [totalMinted, airdropProgress, baycProgress, liquidityProgress, publicProgress] =
+            await this.contract.getDistributionStatus();
 
-        let mintFunction: string;
-        switch (type) {
-            case MintType.AIRDROP:
-                mintFunction = 'mintAirdrop';
-                break;
-            case MintType.BAYC:
-                mintFunction = 'mintBayc';
-                break;
-            case MintType.LIQUIDITY:
-                mintFunction = 'mintLiquidity';
-                break;
-            case MintType.PUBLIC:
-                mintFunction = 'mintPublic';
-                break;
-            default:
-                throw new Error('Invalid mint type');
-        }
-
-        const amountWei = ethers.parseUnits(amountTokens.toString(), 18);
-
-        console.log(`Minting ${amountTokens} tokens (${type}) to ${to}`);
-
-        const gasEstimate = await this.retryRpcCall(() =>
-            this.contract[mintFunction].estimateGas(to, amountWei)
-        );
-
-        const gasPrice = await this.getGasPrice();
-
-        const tx = await this.retryRpcCall(() =>
-            this.contract[mintFunction](to, amountWei, {
-                gasLimit: (gasEstimate * BigInt(120)) / BigInt(100),
-                gasPrice,
-            })
-        );
-
-        console.log(`Transaction sent: ${tx.hash}`);
-
-        const receipt = await tx.wait();
-
-        if (receipt.status !== 1) {
-            throw new Error('Transaction failed on-chain');
-        }
-
-        console.log(`✅ Minted! TxHash: ${receipt.hash}`);
-        return receipt.hash;
+        return {
+            totalMinted: ethers.formatEther(totalMinted),
+            airdropProgress: Number(airdropProgress),
+            baycProgress: Number(baycProgress),
+            liquidityProgress: Number(liquidityProgress),
+            publicProgress: Number(publicProgress)
+        };
     }
 
-    async verifyTx(txHash: string): Promise<boolean> {
+    async getMintingStatus(): Promise<{
+        mintingEnabled: boolean;
+        publicSaleEnabled: boolean;
+        owner: string;
+    }> {
+        const [mintingEnabled, publicSaleEnabled, owner] = await Promise.all([
+            this.contract.mintingEnabled(),
+            this.contract.publicSaleEnabled(),
+            this.contract.owner()
+        ]);
+
+        return {
+            mintingEnabled,
+            publicSaleEnabled,
+            owner
+        };
+    }
+
+    async verifyTransaction(txHash: string): Promise<{
+        success: boolean;
+        blockNumber?: number;
+        gasUsed?: string;
+        status?: number;
+    }> {
         try {
-            const receipt = await this.retryRpcCall(() =>
-                this.provider.getTransactionReceipt(txHash)
-            );
-
+            const receipt = await this.provider.getTransactionReceipt(txHash);
             if (!receipt) {
-                console.warn('Transaction not found');
-                return false;
+                return { success: false };
             }
-
-            return receipt.status === 1;
-        } catch (error: any) {
-            console.error(`Verify failed: ${error.message}`);
-            return false;
-        }
-    }
-
-    async getDistributionStatus() {
-        try {
-            const [totalMinted, airdrop, bayc, liquidity, publicProgress] =
-                await this.retryRpcCall(() =>
-                    this.contract.getDistributionStatus()
-                );
-
-            const [airdropRem, baycRem, liquidityRem, publicRem] =
-                await this.retryRpcCall(() =>
-                    this.contract.getRemainingAllocations()
-                );
 
             return {
-                totalMinted: ethers.formatUnits(totalMinted, 18),
-                progress: {
-                    airdrop: Number(airdrop),
-                    bayc: Number(bayc),
-                    liquidity: Number(liquidity),
-                    public: Number(publicProgress)
-                },
-                remaining: {
-                    airdrop: ethers.formatUnits(airdropRem, 18),
-                    bayc: ethers.formatUnits(baycRem, 18),
-                    liquidity: ethers.formatUnits(liquidityRem, 18),
-                    public: ethers.formatUnits(publicRem, 18)
-                }
+                success: receipt.status === 1,
+                blockNumber: receipt.blockNumber,
+                gasUsed: receipt.gasUsed.toString(),
+                status: receipt.status ?? undefined
             };
-        } catch (error: any) {
-            console.error(`Failed to get distribution status: ${error.message}`);
-            throw error;
+        } catch (error) {
+            console.error('Error verifying transaction:', error);
+            return { success: false };
         }
     }
 
     async getWalletBalance(): Promise<string> {
-        const balance = await this.retryRpcCall(() =>
-            this.provider.getBalance(this.wallet.address)
-        );
-        return ethers.formatEther(balance);
-    }
-
-    async disableMinting(): Promise<string> {
         try {
-            console.log('Disabling minting permanently...');
-
-            const tx = await this.retryRpcCall(() =>
-                this.contract.disableMinting()
-            );
-
-            const receipt = await tx.wait();
-
-            if (receipt.status !== 1) {
-                throw new Error('Failed to disable minting');
-            }
-
-            console.log('✅ Minting disabled permanently');
-            return receipt.hash;
-        } catch (error: any) {
-            console.error(`Failed to disable minting: ${error.message}`);
-            throw error;
+            const balance = await this.provider.getBalance(this.wallet.address);
+            return ethers.formatEther(balance);
+        } catch (error) {
+            console.error('Error getting wallet balance:', error);
+            throw new Error('Failed to get wallet balance');
         }
     }
 
     async getContractBalance(): Promise<string> {
-        const balance = await this.retryRpcCall(() =>
-            this.provider.getBalance(this.contract.target)
-        );
-        return ethers.formatEther(balance);
+        try {
+            const balance = await this.provider.getBalance(process.env.CONTRACT_ADDRESS!);
+            return ethers.formatEther(balance);
+        } catch (error) {
+            console.error('Error getting contract balance:', error);
+            throw new Error('Failed to get contract balance');
+        }
     }
+
+    async getHealth(): Promise<{
+        rpcConnected: boolean;
+        contractConnected: boolean;
+        walletConnected: boolean;
+        blockNumber?: number;
+    }> {
+        try {
+            const blockNumber = await this.provider.getBlockNumber();
+            const owner = await this.contract.owner();
+            const walletAddress = await this.wallet.getAddress();
+
+            return {
+                rpcConnected: true,
+                contractConnected: !!owner,
+                walletConnected: !!walletAddress,
+                blockNumber
+            };
+        } catch (error) {
+            console.error('Health check error:', error);
+            return {
+                rpcConnected: false,
+                contractConnected: false,
+                walletConnected: false
+            };
+        }
+    }
+}
+
+// Singleton instance
+let mintServiceInstance: MintService | null = null;
+
+export function getMintService(): MintService {
+    if (!mintServiceInstance) {
+        mintServiceInstance = new MintService();
+    }
+    return mintServiceInstance;
 }

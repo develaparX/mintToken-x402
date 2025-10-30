@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Check remaining allocation before minting
-        const status = await service.getDistributionStatus();
-        const remainingAirdrop = parseFloat(status.remaining.airdrop);
+        const remaining = await service.getRemainingAllocations();
+        const remainingAirdrop = parseFloat(remaining.airdrop);
 
         if (amount > remainingAirdrop) {
             return createErrorResponse(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Execute mint transaction
-        const txHash = await service.mint(MintType.AIRDROP, to, amount);
+        const txHash = await service.mintAirdrop(to, amount.toString());
 
         return createSuccessResponse({
             txHash,

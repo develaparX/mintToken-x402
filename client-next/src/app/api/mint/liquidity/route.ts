@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Check remaining allocation before minting
-        const status = await service.getDistributionStatus();
-        const remainingLiquidity = parseFloat(status.remaining.liquidity);
+        const remaining = await service.getRemainingAllocations();
+        const remainingLiquidity = parseFloat(remaining.liquidity);
 
         if (amount > remainingLiquidity) {
             return createErrorResponse(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Execute mint transaction
-        const txHash = await service.mint(MintType.LIQUIDITY, to, amount);
+        const txHash = await service.mintLiquidity(to, amount.toString());
 
         return createSuccessResponse({
             txHash,

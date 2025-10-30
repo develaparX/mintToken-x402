@@ -96,9 +96,12 @@ export async function GET(request: NextRequest) {
         // Check 3: Distribution Status (Contract Connectivity)
         try {
             const checkStart = Date.now();
-            const distributionStatus = await service.getDistributionStatus();
+            const [distributionStatus, remainingAllocations] = await Promise.all([
+                service.getDistributionStatus(),
+                service.getRemainingAllocations()
+            ]);
 
-            const totalRemaining = Object.values(distributionStatus.remaining)
+            const totalRemaining = Object.values(remainingAllocations)
                 .reduce((sum, val) => sum + parseFloat(val), 0);
 
             const statusCheck: HealthCheck = {
@@ -112,7 +115,7 @@ export async function GET(request: NextRequest) {
                 statusCheck.details = {
                     totalMinted: distributionStatus.totalMinted,
                     totalRemaining: totalRemaining.toLocaleString(),
-                    allocations: distributionStatus.remaining,
+                    allocations: remainingAllocations,
                     mintingActive: totalRemaining > 0,
                 };
             }

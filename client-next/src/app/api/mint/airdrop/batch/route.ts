@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
 
         // Check total amount against remaining allocation
         const totalAmount = recipients.reduce((sum: number, r: BatchRecipient) => sum + r.amount, 0);
-        const status = await service.getDistributionStatus();
-        const remainingAirdrop = parseFloat(status.remaining.airdrop);
+        const remaining = await service.getRemainingAllocations();
+        const remainingAirdrop = parseFloat(remaining.airdrop);
 
         if (totalAmount > remainingAirdrop) {
             return createErrorResponse(
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
             try {
                 console.log(`Processing batch item ${i + 1}/${recipients.length}: ${recipient.amount} tokens to ${recipient.to}`);
 
-                const txHash = await service.mint(MintType.AIRDROP, recipient.to, recipient.amount);
+                const txHash = await service.mintAirdrop(recipient.to, recipient.amount.toString());
                 processedAmount += recipient.amount;
 
                 results.push({

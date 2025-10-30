@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { getRemainingSupply } from "@/lib/supply";
 import { PaymentModal } from "./PaymentModal";
-import { GaslessInfo } from "./GaslessInfo";
-import { TokenStats } from "./TokenStats";
 import { ethers } from "ethers";
 
 export const MintForm = ({
@@ -76,20 +74,14 @@ export const MintForm = ({
 
   return (
     <>
-      <div className="fixed -top-25 md:-top-28 w-full">
+      <div className="fixed -top-25 md:-top-15 w-full">
         <h1
-          className="text-7xl md:text-8xl  font-black text-white mb-2 glitch-text"
+          className="text-7xl md:text-5xl font-black text-white mb-2 glitch-text"
           style={{ fontFamily: "'Honk', system-ui" }}
         >
           MINT MY TOKEN
         </h1>
       </div>
-
-      {/* Token Statistics */}
-      <TokenStats />
-
-      {/* Gasless Info */}
-      <GaslessInfo />
 
       {/* BSC Address Input */}
       <div className="mb-6">
@@ -113,9 +105,6 @@ export const MintForm = ({
         {addressError && (
           <p className="mt-2 text-sm text-red-400">{addressError}</p>
         )}
-        <p className="mt-1 text-xs text-gray-500">
-          ⚡ No wallet connection needed - just enter your BSC address
-        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-4">
@@ -127,7 +116,7 @@ export const MintForm = ({
               onClick={() => handlePackageSelect(pkg, index)}
               disabled={isDisabled}
               className={`
-                relative bg-gradient-to-br from-purple-900/50 to-blue-900/50
+                relative bg-gradient-to-br from-purple-900/50 to-blue-900/50 
                 border rounded-md p-3 transition-all duration-300
                 ${
                   isDisabled
@@ -156,7 +145,7 @@ export const MintForm = ({
       </div>
 
       <div className="text-center text-xs text-gray-500">
-        💳 Pembayaran menggunakan USDT/USDC/USD1 via B402 Protocol
+        💳 Pembayaran menggunakan USDT/USDC/USD1
       </div>
 
       {/* Modal payment */}

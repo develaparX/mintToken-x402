@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { useB402Payment } from "@/hooks/useB402Payment";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { ApprovalModal } from "./ApprovalModal";
 import { BSCApprovalModal } from "./BSCApprovalModal";
 import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
-import { getFacilitatorAddressClient } from "@/lib/facilitator";
 
 interface PaymentModalProps {
   mintAmount: number;
@@ -24,7 +22,6 @@ export const PaymentModal = ({
   onClose,
 }: PaymentModalProps) => {
   const [selectedToken, setSelectedToken] = useState("USDT");
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showBSCApprovalModal, setShowBSCApprovalModal] = useState(false);
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [paymentInstructions, setPaymentInstructions] = useState<any>(null);
@@ -42,9 +39,14 @@ export const PaymentModal = ({
   } = useB402Payment();
 
   const tokens = [
-    { symbol: "USDT", name: "Tether USD" },
-    { symbol: "USDC", name: "USD Coin" },
-    { symbol: "USD1", name: "USD1" },
+    { symbol: "USDT", name: "Tether USD", icon: "₮", color: "bg-green-500" },
+    { symbol: "USDC", name: "USD Coin", icon: "$", color: "bg-blue-500" },
+    {
+      symbol: "USD1",
+      name: "World Liberty Financial USD",
+      icon: "1",
+      color: "bg-purple-500",
+    },
   ];
 
   const isProcessing = status !== "idle" && status !== "error";
@@ -131,12 +133,6 @@ export const PaymentModal = ({
     reset();
   };
 
-  const handleApprovalSuccess = () => {
-    setShowApprovalModal(false);
-    // Retry payment after successful approval
-    handlePayment();
-  };
-
   const handleApprovalCompleted = async (txHash: string) => {
     try {
       setShowBSCApprovalModal(false);
@@ -216,18 +212,29 @@ export const PaymentModal = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-800 border border-gray-600 rounded">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                      <span className="text-black font-bold text-sm">₮</span>
+                    <div
+                      className={`w-8 h-8 ${
+                        tokens.find((t) => t.symbol === selectedToken)?.color ||
+                        "bg-yellow-500"
+                      } rounded-full flex items-center justify-center`}
+                    >
+                      <span className="text-white font-bold text-sm">
+                        {tokens.find((t) => t.symbol === selectedToken)?.icon ||
+                          "₮"}
+                      </span>
                     </div>
                     <div>
                       <div className="text-white font-medium">
                         {selectedToken}
                       </div>
-                      <div className="text-sm text-gray-400">Tether USD</div>
+                      <div className="text-sm text-gray-400">
+                        {tokens.find((t) => t.symbol === selectedToken)?.name ||
+                          "Tether USD"}
+                      </div>
                     </div>
                   </div>
                   <div className="text-sm text-gray-400">
-                    Total: ${totalPrice} USD
+                    Total: ${totalPrice} {selectedToken}
                   </div>
                 </div>
               </div>
@@ -309,20 +316,6 @@ export const PaymentModal = ({
           </div>
         )}
       </div>
-
-      {/* Approval Modal */}
-      {showApprovalModal && (
-        <ApprovalModal
-          tokenSymbol={selectedToken}
-          amount={totalPrice.toString()}
-          facilitatorAddress={getFacilitatorAddressClient()}
-          userAddress={recipientAddress}
-          onApprovalSuccess={handleApprovalSuccess}
-          onClose={() => {
-            setShowApprovalModal(false);
-          }}
-        />
-      )}
 
       {/* BSC Approval Modal */}
       {showBSCApprovalModal && approvalData && (

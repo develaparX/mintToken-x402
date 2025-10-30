@@ -26,11 +26,14 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const includeWallet = searchParams.get('includeWallet') === 'true';
 
-        const status = await service.getDistributionStatus();
+        const [distributionStatus, remainingAllocations] = await Promise.all([
+            service.getDistributionStatus(),
+            service.getRemainingAllocations()
+        ]);
 
         // Calculate additional metrics
-        const totalMinted = parseFloat(status.totalMinted);
-        const totalRemaining = Object.values(status.remaining)
+        const totalMinted = parseFloat(distributionStatus.totalMinted);
+        const totalRemaining = Object.values(remainingAllocations)
             .reduce((sum, val) => sum + parseFloat(val), 0);
 
         const overallProgress = (totalMinted / ALLOCATION_TOTALS.total) * 100;
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
         const statusData: any = {
             overview: {
                 totalSupply: ALLOCATION_TOTALS.total.toLocaleString(),
-                totalMinted: status.totalMinted,
+                totalMinted: distributionStatus.totalMinted,
                 totalRemaining: totalRemaining.toLocaleString(),
                 overallProgress: `${overallProgress.toFixed(2)}%`,
                 mintingActive: totalRemaining > 0,
@@ -48,43 +51,43 @@ export async function GET(request: NextRequest) {
             allocations: {
                 airdrop: {
                     total: ALLOCATION_TOTALS.airdrop.toLocaleString(),
-                    minted: (ALLOCATION_TOTALS.airdrop - parseFloat(status.remaining.airdrop)).toLocaleString(),
-                    remaining: status.remaining.airdrop,
-                    progress: status.progress.airdrop + '%',
-                    isExhausted: parseFloat(status.remaining.airdrop) === 0,
+                    minted: (ALLOCATION_TOTALS.airdrop - parseFloat(remainingAllocations.airdrop)).toLocaleString(),
+                    remaining: remainingAllocations.airdrop,
+                    progress: Math.round(((ALLOCATION_TOTALS.airdrop - parseFloat(remainingAllocations.airdrop)) / ALLOCATION_TOTALS.airdrop) * 100) + '%',
+                    isExhausted: parseFloat(remainingAllocations.airdrop) === 0,
                     description: 'Community airdrop allocation (5% of total supply)',
                 },
                 bayc: {
                     total: ALLOCATION_TOTALS.bayc.toLocaleString(),
-                    minted: (ALLOCATION_TOTALS.bayc - parseFloat(status.remaining.bayc)).toLocaleString(),
-                    remaining: status.remaining.bayc,
-                    progress: status.progress.bayc + '%',
-                    isExhausted: parseFloat(status.remaining.bayc) === 0,
+                    minted: (ALLOCATION_TOTALS.bayc - parseFloat(remainingAllocations.bayc)).toLocaleString(),
+                    remaining: remainingAllocations.bayc,
+                    progress: Math.round(((ALLOCATION_TOTALS.bayc - parseFloat(remainingAllocations.bayc)) / ALLOCATION_TOTALS.bayc) * 100) + '%',
+                    isExhausted: parseFloat(remainingAllocations.bayc) === 0,
                     description: 'BAYC holder rewards (5% of total supply)',
                 },
                 liquidity: {
                     total: ALLOCATION_TOTALS.liquidity.toLocaleString(),
-                    minted: (ALLOCATION_TOTALS.liquidity - parseFloat(status.remaining.liquidity)).toLocaleString(),
-                    remaining: status.remaining.liquidity,
-                    progress: status.progress.liquidity + '%',
-                    isExhausted: parseFloat(status.remaining.liquidity) === 0,
+                    minted: (ALLOCATION_TOTALS.liquidity - parseFloat(remainingAllocations.liquidity)).toLocaleString(),
+                    remaining: remainingAllocations.liquidity,
+                    progress: Math.round(((ALLOCATION_TOTALS.liquidity - parseFloat(remainingAllocations.liquidity)) / ALLOCATION_TOTALS.liquidity) * 100) + '%',
+                    isExhausted: parseFloat(remainingAllocations.liquidity) === 0,
                     description: 'DEX liquidity pool allocation (20% of total supply)',
                 },
                 public: {
                     total: ALLOCATION_TOTALS.public.toLocaleString(),
-                    minted: (ALLOCATION_TOTALS.public - parseFloat(status.remaining.public)).toLocaleString(),
-                    remaining: status.remaining.public,
-                    progress: status.progress.public + '%',
-                    isExhausted: parseFloat(status.remaining.public) === 0,
+                    minted: (ALLOCATION_TOTALS.public - parseFloat(remainingAllocations.public)).toLocaleString(),
+                    remaining: remainingAllocations.public,
+                    progress: Math.round(((ALLOCATION_TOTALS.public - parseFloat(remainingAllocations.public)) / ALLOCATION_TOTALS.public) * 100) + '%',
+                    isExhausted: parseFloat(remainingAllocations.public) === 0,
                     description: 'Public sale allocation (70% of total supply)',
                 },
             },
             metrics: {
                 distributionEfficiency: `${((totalMinted / ALLOCATION_TOTALS.total) * 100).toFixed(2)}%`,
                 remainingPercentage: `${((totalRemaining / ALLOCATION_TOTALS.total) * 100).toFixed(2)}%`,
-                activeAllocations: Object.values(status.remaining)
+                activeAllocations: Object.values(remainingAllocations)
                     .filter(val => parseFloat(val) > 0).length,
-                exhaustedAllocations: Object.values(status.remaining)
+                exhaustedAllocations: Object.values(remainingAllocations)
                     .filter(val => parseFloat(val) === 0).length,
             }
         };

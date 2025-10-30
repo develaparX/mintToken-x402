@@ -27,7 +27,10 @@ export async function GET(request: NextRequest) {
         const type = searchParams.get('type');
         const format = searchParams.get('format') || 'detailed'; // 'detailed' or 'simple'
 
-        const status = await service.getDistributionStatus();
+        const [distributionStatus, remainingAllocations] = await Promise.all([
+            service.getDistributionStatus(),
+            service.getRemainingAllocations()
+        ]);
 
         // If specific type requested
         if (type) {
@@ -43,11 +46,11 @@ export async function GET(request: NextRequest) {
                 );
             }
 
-            const typeKey = type as keyof typeof status.remaining;
-            const remaining = parseFloat(status.remaining[typeKey]);
+            const typeKey = type as keyof typeof remainingAllocations;
+            const remaining = parseFloat(remainingAllocations[typeKey]);
             const total = ALLOCATION_TOTALS[typeKey];
             const minted = total - remaining;
-            const progress = status.progress[typeKey];
+            const progress = Math.round((minted / total) * 100);
 
             const allocationData = {
                 type,
@@ -71,15 +74,16 @@ export async function GET(request: NextRequest) {
         }
 
         // Return all allocations
+        const totalRemaining = Object.values(remainingAllocations)
+            .reduce((sum, val) => sum + parseFloat(val), 0);
+
         const allAllocations = {
             summary: {
                 totalSupply: ALLOCATION_TOTALS.total.toLocaleString(),
-                totalMinted: status.totalMinted,
-                totalRemaining: Object.values(status.remaining)
-                    .reduce((sum, val) => sum + parseFloat(val), 0)
-                    .toLocaleString(),
+                totalMinted: distributionStatus.totalMinted,
+                totalRemaining: totalRemaining.toLocaleString(),
                 overallProgress: `${(
-                    (parseFloat(status.totalMinted) / ALLOCATION_TOTALS.total) * 100
+                    (parseFloat(distributionStatus.totalMinted) / ALLOCATION_TOTALS.total) * 100
                 ).toFixed(2)}%`,
             },
             allocations: {} as any
@@ -89,10 +93,10 @@ export async function GET(request: NextRequest) {
         for (const [allocType, total] of Object.entries(ALLOCATION_TOTALS)) {
             if (allocType === 'total') continue;
 
-            const typeKey = allocType as keyof typeof status.remaining;
-            const remaining = parseFloat(status.remaining[typeKey]);
+            const typeKey = allocType as keyof typeof remainingAllocations;
+            const remaining = parseFloat(remainingAllocations[typeKey]);
             const minted = total - remaining;
-            const progress = status.progress[typeKey];
+            const progress = Math.round((minted / total) * 100);
 
             allAllocations.allocations[allocType] = {
                 total: total.toLocaleString(),
@@ -107,8 +111,8 @@ export async function GET(request: NextRequest) {
 
         if (format === 'simple') {
             return createSuccessResponse({
-                remaining: status.remaining,
-                progress: status.progress,
+                remaining: remainingAllocations,
+                totalMinted: distributionStatus.totalMinted,
             });
         }
 

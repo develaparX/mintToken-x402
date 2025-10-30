@@ -180,7 +180,7 @@ export class PermitSigner {
 
 // Helper function to check if browser supports Web3
 export function isWeb3Available(): boolean {
-    return typeof window !== 'undefined' && !!window.ethereum;
+    return typeof window !== 'undefined' && !!(window as any).ethereum;
 }
 
 // Helper function to get user's current address

@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
         const reason = body.reason || 'No reason provided';
 
         // Get current status before disabling
-        const statusBefore = await service.getDistributionStatus();
+        const [statusBefore, remainingAllocations] = await Promise.all([
+            service.getDistributionStatus(),
+            service.getRemainingAllocations()
+        ]);
 
         // Execute disable transaction
         const txHash = await service.disableMinting();
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
             reason: reason,
             statusBeforeDisable: {
                 totalMinted: statusBefore.totalMinted,
-                remainingAllocations: statusBefore.remaining
+                remainingAllocations: remainingAllocations
             },
             warnings: [
                 'Minting has been permanently disabled',

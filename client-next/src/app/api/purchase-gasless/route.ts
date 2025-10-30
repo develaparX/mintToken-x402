@@ -23,9 +23,9 @@ const USDT_ABI = [
 
 // Token addresses on BSC
 const TOKEN_ADDRESSES = {
-    USDT: "0x55d398326f99059fF775485246999027B3197955",
-    USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    USD1: "0x55d398326f99059fF775485246999027B3197955" // Using USDT for now
+    USDT: "0x55d398326f99059fF775485246999027B3197955", // Tether USD
+    USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", // USD Coin
+    USD1: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"  // World Liberty Financial USD
 };
 
 export async function POST(request: NextRequest) {

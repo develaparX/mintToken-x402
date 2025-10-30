@@ -18,6 +18,3 @@ export const B402_CONFIG = {
     }
 };
 
-export const WAGMI_CONFIG = {
-    PROJECT_ID: process.env.NEXT_PUBLIC_PROJECT_ID || "",
-};

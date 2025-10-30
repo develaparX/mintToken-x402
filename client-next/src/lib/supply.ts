@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import { shouldUseDemoMode, DEMO_DATA } from './demo-mode';
 
 // MyToken Contract ABI for supply queries (updated for new contract)
 const SUPPLY_ABI = [

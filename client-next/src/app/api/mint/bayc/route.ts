@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Check remaining allocation before minting
-        const status = await service.getDistributionStatus();
-        const remainingBayc = parseFloat(status.remaining.bayc);
+        const remaining = await service.getRemainingAllocations();
+        const remainingBayc = parseFloat(remaining.bayc);
 
         if (amount > remainingBayc) {
             return createErrorResponse(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Execute mint transaction
-        const txHash = await service.mint(MintType.BAYC, to, amount);
+        const txHash = await service.mintBayc(to, amount.toString());
 
         return createSuccessResponse({
             txHash,

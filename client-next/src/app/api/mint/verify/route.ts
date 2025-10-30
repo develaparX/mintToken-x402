@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify transaction
-        const isValid = await service.verifyTx(txHash);
+        const verificationResult = await service.verifyTransaction(txHash);
+        const isValid = verificationResult.success;
 
         const verificationData: any = {
             txHash: txHash,

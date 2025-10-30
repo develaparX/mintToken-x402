@@ -10,9 +10,9 @@ const USDT_ABI = [
 
 // Token addresses on BSC
 const TOKEN_ADDRESSES = {
-    USDT: "0x55d398326f99059fF775485246999027B3197955",
-    USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    USD1: "0x55d398326f99059fF775485246999027B3197955"
+    USDT: "0x55d398326f99059fF775485246999027B3197955", // Tether USD
+    USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", // USD Coin
+    USD1: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"  // World Liberty Financial USD
 };
 
 export async function POST(request: NextRequest) {
@@ -77,17 +77,20 @@ export async function POST(request: NextRequest) {
         let matchingEvent = null;
 
         for (const event of events) {
-            const transferAmount = event.args?.[2];
-            if (transferAmount && transferAmount >= expectedAmountWei) {
-                paymentFound = true;
-                matchingEvent = {
-                    txHash: event.transactionHash,
-                    blockNumber: event.blockNumber,
-                    amount: ethers.formatUnits(transferAmount, decimals),
-                    from: event.args?.[0],
-                    to: event.args?.[1]
-                };
-                break;
+            // Type guard to check if event has args property
+            if ('args' in event && event.args) {
+                const transferAmount = event.args[2];
+                if (transferAmount && transferAmount >= expectedAmountWei) {
+                    paymentFound = true;
+                    matchingEvent = {
+                        txHash: event.transactionHash,
+                        blockNumber: event.blockNumber,
+                        amount: ethers.formatUnits(transferAmount, decimals),
+                        from: event.args[0],
+                        to: event.args[1]
+                    };
+                    break;
+                }
             }
         }
 
