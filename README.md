@@ -1,27 +1,94 @@
 # Token Minting DApp dengan B402 Payment Gateway
 
-Aplikasi decentralized untuk minting ERC20 token dengan sistem pembayaran menggunakan B402 payment gateway. Proyek ini terdiri dari smart contract, backend NestJS, dan frontend React.
+Aplikasi decentralized untuk minting ERC20 token dengan sistem pembayaran menggunakan B402 payment gateway. Proyek ini terdiri dari smart contract, backend NestJS, dan dua pilihan frontend (React + Vite dan Next.js).
 
 ## 🏗️ Struktur Proyek
 
 ```
 ├── contracts/          # Smart contracts Solidity
 │   └── t.sol          # ERC20 token contract (MyToken)
-├── server/            # Backend NestJS
+├── server/            # Backend API (NestJS + TypeScript)
 │   ├── src/
 │   │   ├── mint.service.ts    # Service untuk minting token
 │   │   ├── mint.controller.ts # API endpoint
 │   │   └── main.ts           # Entry point
 │   └── .env          # Environment variables
-├── client/           # Frontend React + Vite
+├── client/           # Frontend React + Vite (Pilihan 1)
 │   ├── src/
 │   │   ├── components/       # React components
 │   │   ├── lib/             # Utility functions
 │   │   ├── config.ts        # Konfigurasi aplikasi
 │   │   └── App.tsx          # Main component
 │   └── package.json
+├── client-next/      # Frontend Next.js (Pilihan 2)
+│   ├── src/
+│   │   ├── app/             # Next.js App Router
+│   │   ├── components/      # React components
+│   │   └── lib/            # Utility functions
+│   └── package.json
 └── README.md
 ```
+
+## 🎯 Komponen Aplikasi
+
+### 📱 **Client (React + Vite) - Frontend Only**
+
+Frontend client yang berkomunikasi dengan server NestJS terpisah:
+
+- **React 19** dengan TypeScript untuk UI yang reaktif
+- **Vite** sebagai build tool untuk development yang cepat
+- **Tailwind CSS 4** untuk styling yang efisien
+- **Reown AppKit** (WalletConnect v2) untuk koneksi wallet
+- **Wagmi + Viem** untuk interaksi blockchain
+- **Ethers.js** untuk operasi Web3
+- **Tanstack Query** untuk state management
+
+**Arsitektur:**
+
+- Frontend berkomunikasi dengan server NestJS via REST API
+- Tidak memiliki backend logic sendiri
+- Mengandalkan server eksternal untuk minting dan verifikasi
+- Cocok untuk development dengan hot reload yang cepat
+
+### ⚙️ **Server (NestJS) - Backend API**
+
+Backend API yang robust dan scalable untuk melayani client React:
+
+- **NestJS 11** framework dengan TypeScript
+- **Ethers.js** untuk smart contract interaction
+- **RESTful API** dengan multiple endpoints
+- **Environment-based configuration**
+- **Built-in validation dan error handling**
+
+**API Endpoints:**
+
+- `POST /mint` - Public token minting
+- `POST /mint/airdrop` - Airdrop distribution
+- `POST /mint/bayc` - BAYC holder rewards
+- `POST /mint/liquidity` - Liquidity pool allocation
+- `GET /mint/status` - Distribution status
+- `GET /mint/health` - Service health check
+
+### 🚀 **Client-Next (Next.js) - Fullstack Application**
+
+Aplikasi fullstack yang menggabungkan frontend dan backend dalam satu project:
+
+- **Next.js 16** dengan App Router untuk frontend
+- **API Routes** untuk backend functionality (`/api/mint/*`)
+- **React 19** dengan TypeScript
+- **Tailwind CSS 4** untuk styling
+- **Reown AppKit** untuk wallet integration
+- **Built-in MintService** untuk contract interaction
+- **React Compiler** untuk optimasi performa
+
+**Keunggulan Fullstack:**
+
+- Self-contained application (tidak perlu server terpisah)
+- Server-side rendering (SSR) dan Static site generation (SSG)
+- API routes terintegrasi dengan frontend
+- Optimasi SEO dan performance
+- Deployment yang lebih sederhana (satu aplikasi)
+- Shared code antara frontend dan backend
 
 ## 🚀 Fitur Utama
 
@@ -56,11 +123,20 @@ cd server
 pnpm install
 ```
 
-**Frontend:**
+**Frontend (Pilih salah satu):**
+
+**Opsi 1 - React + Vite (Recommended untuk development):**
 
 ```bash
 cd client
 pnpm install
+```
+
+**Opsi 2 - Next.js (Recommended untuk production):**
+
+```bash
+cd client-next
+npm install
 ```
 
 ### 3. Deploy Smart Contract
@@ -135,24 +211,34 @@ export const MINT_CONFIG = {
 
 ### 6. Jalankan Aplikasi
 
-**Backend:**
+**Opsi 1 - Client + Server (Terpisah):**
 
 ```bash
+# Terminal 1 - Backend
 cd server
 pnpm run start:dev
-```
 
-**Frontend:**
-
-```bash
+# Terminal 2 - Frontend
 cd client
 pnpm run dev
 ```
 
 Aplikasi akan berjalan di:
 
-- Backend: http://localhost:3001
+- Backend API: http://localhost:3001
 - Frontend: http://localhost:5173
+
+**Opsi 2 - Client-Next (Fullstack):**
+
+```bash
+cd client-next
+npm run dev
+```
+
+Aplikasi akan berjalan di:
+
+- Fullstack App: http://localhost:3000
+- API Routes: http://localhost:3000/api/mint/\*
 
 ## 🔧 Konfigurasi Penting
 

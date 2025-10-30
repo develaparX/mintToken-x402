@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MY TOKEN - B402 Gasless DApp
 
-## Getting Started
+A Next.js DApp for minting MY TOKEN using B402 Protocol for gasless transactions.
 
-First, run the development server:
+## 🚀 Features
+
+### B402 Gasless Mode
+
+- **No BNB Required**: Users don't need BNB for gas fees
+- **No Wallet Connection**: Just enter BSC address manually
+- **Backend Signing**: Facilitator service handles all blockchain interactions
+- **Instant Processing**: No wallet popups or manual confirmations
+- **Agent-Friendly**: Perfect for automation and programmatic access
+
+## 🏗️ Architecture
+
+```
+User Input (BSC Address)
+    ↓
+Payment Selection (USDT/USDC/USD1)
+    ↓
+B402 Payment Processing (Backend)
+    ↓
+Gasless Mint (Facilitator Wallet)
+    ↓
+Tokens Sent to User Address
+```
+
+## 🔧 Setup
+
+1. **Install Dependencies**
+
+```bash
+npm install
+```
+
+2. **Environment Variables**
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+BSC_RPC_URL=https://bsc-dataseed1.binance.org/
+FACILITATOR_PRIVATE_KEY=your_facilitator_private_key
+CONTRACT_ADDRESS=your_token_contract_address
+```
+
+3. **Run Development Server**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📁 Key Files
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### B402 Implementation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/lib/b402-facilitator.ts` - Core B402 facilitator service
+- `src/hooks/useB402Payment.ts` - Payment processing hook
+- `src/app/api/b402-payment/route.ts` - B402 payment API
+- `src/app/api/mint-gasless/route.ts` - Gasless minting API
 
-## Learn More
+### Components
 
-To learn more about Next.js, take a look at the following resources:
+- `src/components/MintForm.tsx` - Main minting interface
+- `src/components/PaymentModal.tsx` - B402 payment modal
+- `src/components/GaslessInfo.tsx` - Information component
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔄 User Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Enter BSC Address**: User inputs their BSC wallet address
+2. **Select Package**: Choose token amount and price
+3. **Payment Processing**: B402 handles USDT/USDC/USD1 payment
+4. **Gasless Mint**: Facilitator mints tokens without user gas fees
+5. **Token Delivery**: Tokens sent directly to user's address
 
-## Deploy on Vercel
+## 🛡️ Security
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Payment verification through B402 protocol
+- Address validation before processing
+- Facilitator wallet isolation
+- Error handling and transaction monitoring
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🌐 Deployment
+
+The app can be deployed to any platform supporting Next.js:
+
+- Vercel
+- Netlify
+- Railway
+- Self-hosted
+
+## 📚 B402 Protocol
+
+Learn more about B402:
+
+- [B402 Documentation](https://docs.b402.ai/)
+- [B402 Concepts](https://docs.b402.ai/concepts/facilitator)
+- [GitHub Repository](https://github.com/Vistara-Labs/b402/)
+
+## 🔗 Comparison
+
+| Feature           | Traditional Wallet   | B402 Gasless |
+| ----------------- | -------------------- | ------------ |
+| Gas Fees          | User pays BNB        | Zero fees    |
+| Wallet Connection | Required             | Not needed   |
+| User Experience   | Multiple popups      | Single flow  |
+| Automation        | Difficult            | Easy         |
+| Speed             | Slow (confirmations) | Fast         |

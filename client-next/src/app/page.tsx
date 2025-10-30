@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
 import { MintForm } from "@/components/MintForm";
 import { MintSuccess } from "@/components/MintSuccess";
-import { WalletButton } from "@/components/WalletButton";
 
 export default function Home() {
   const [mintResult, setMintResult] = useState<{
@@ -78,9 +76,12 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/40 via-transparent to-blue-900/40"></div>
       </div>
 
-      {/* Connect Button */}
+      {/* B402 Gasless Badge */}
       <div className="fixed top-4 right-4 z-20">
-        <WalletButton />
+        <div className="bg-gradient-to-r from-green-500 to-blue-500 px-4 py-2 rounded-lg border-2 border-white/20 backdrop-blur-sm">
+          <div className="text-white font-bold text-sm">⚡ GASLESS</div>
+          <div className="text-white/80 text-xs">No wallet needed</div>
+        </div>
       </div>
 
       {/* Airdrop Section - Full Screen */}

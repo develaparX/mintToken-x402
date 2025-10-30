@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { getRemainingSupply } from "@/lib/supply";
 import { PaymentModal } from "./PaymentModal";
+import { GaslessInfo } from "./GaslessInfo";
+import { TokenStats } from "./TokenStats";
+import { ethers } from "ethers";
 
 export const MintForm = ({
   onMintSuccess,
@@ -14,6 +17,8 @@ export const MintForm = ({
   const [remaining, setRemaining] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [addressError, setAddressError] = useState("");
 
   // Paket pembelian
   const packages = [
@@ -29,12 +34,31 @@ export const MintForm = ({
       .finally(() => setLoading(false));
   }, []);
 
+  const validateAddress = (address: string) => {
+    if (!address.trim()) {
+      setAddressError("Please enter your BSC address");
+      return false;
+    }
+    if (!ethers.isAddress(address)) {
+      setAddressError("Invalid BSC address format");
+      return false;
+    }
+    setAddressError("");
+    return true;
+  };
+
   const handlePackageSelect = (pkg: (typeof packages)[0], index: number) => {
     if (remaining === 0) return;
     if (pkg.tokens > remaining) {
       alert(`Hanya tersisa ${remaining} token.`);
       return;
     }
+
+    // Validate address before proceeding
+    if (!validateAddress(recipientAddress)) {
+      return;
+    }
+
     setSelectedPackage(index);
     setMintAmount(pkg.tokens);
     setShowModal(true);
@@ -52,13 +76,46 @@ export const MintForm = ({
 
   return (
     <>
-      <div className="fixed -top-25 md:-top-15 w-full">
+      <div className="fixed -top-25 md:-top-28 w-full">
         <h1
-          className="text-7xl md:text-5xl font-black text-white mb-2 glitch-text"
+          className="text-7xl md:text-8xl  font-black text-white mb-2 glitch-text"
           style={{ fontFamily: "'Honk', system-ui" }}
         >
           MINT MY TOKEN
         </h1>
+      </div>
+
+      {/* Token Statistics */}
+      <TokenStats />
+
+      {/* Gasless Info */}
+      <GaslessInfo />
+
+      {/* BSC Address Input */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Your BSC Address (where tokens will be sent):
+        </label>
+        <input
+          type="text"
+          value={recipientAddress}
+          onChange={(e) => {
+            setRecipientAddress(e.target.value);
+            if (addressError) setAddressError("");
+          }}
+          placeholder="0x1234567890123456789012345678901234567890"
+          className={`w-full px-4 py-3 bg-black/50 backdrop-blur-sm border text-white placeholder-gray-500 focus:outline-none transition-all rounded-md ${
+            addressError
+              ? "border-red-500 focus:border-red-400"
+              : "border-gray-700 focus:border-purple-500"
+          }`}
+        />
+        {addressError && (
+          <p className="mt-2 text-sm text-red-400">{addressError}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-500">
+          ⚡ No wallet connection needed - just enter your BSC address
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-4">
@@ -70,7 +127,7 @@ export const MintForm = ({
               onClick={() => handlePackageSelect(pkg, index)}
               disabled={isDisabled}
               className={`
-                relative bg-gradient-to-br from-purple-900/50 to-blue-900/50 
+                relative bg-gradient-to-br from-purple-900/50 to-blue-900/50
                 border rounded-md p-3 transition-all duration-300
                 ${
                   isDisabled
@@ -107,6 +164,7 @@ export const MintForm = ({
         <PaymentModal
           mintAmount={mintAmount}
           totalPrice={packages[selectedPackage].price}
+          recipientAddress={recipientAddress}
           onSuccess={(data) => {
             onMintSuccess(data);
             setShowModal(false);
