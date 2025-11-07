@@ -1,29 +1,47 @@
-# MY TOKEN - Token Minting DApp
+# MY TOKEN - B402 Gasless Minting DApp
 
-A Next.js DApp for minting MY TOKEN with gasless transactions on BSC.
+A Next.js DApp implementing B402 gasless protocol for seamless token minting on BSC. Users can mint tokens without needing BNB for gas fees through real USDT/USDC payments.
 
-## 🚀 Features
+## 🚀 Key Features
 
-### Gasless Minting
+### True Gasless Experience (B402 Protocol)
 
-- **No BNB Required**: Users don't need BNB for gas fees
-- **Simple Interface**: Just enter BSC address to receive tokens
-- **Multiple Payment Options**: Support for USDT, USDC, and USD1
-- **Instant Processing**: Fast token delivery to user address
-- **Clean UI**: Minimalist design focused on core functionality
+- **Zero Gas Fees**: Users never pay BNB - facilitator handles all gas costs
+- **No Wallet Connection Required**: Simple BSC address input (optional wallet connect)
+- **Real Payment Processing**: Actual USDT/USDC transfers, not simulated
+- **One-Time Approval**: Approve once, then all future transactions are gasless
+- **Mobile Optimized**: Perfect UX for mobile users and automation
 
-## 🏗️ Architecture
+### Smart Payment System
+
+- **Multiple Tokens**: USDT, USDC, USD1 support on BSC
+- **Flexible Packages**: $1 (20 tokens) to $100 (2000 tokens)
+- **Real-time Supply**: Live tracking of remaining token allocation
+- **Instant Processing**: Immediate token delivery after payment
+
+### Advanced UI/UX
+
+- **Anime-themed Design**: Beautiful background imagery
+- **Wallet Auto-detection**: Automatically detects connected wallets
+- **Payment Modal**: Streamlined payment flow with clear status
+- **Success Tracking**: BSCScan integration for transaction verification
+
+## 🏗️ B402 Architecture
 
 ```
-User Input (BSC Address)
-    ↓
-Payment Selection (USDT/USDC/USD1)
-    ↓
-Payment Processing (Backend)
-    ↓
-Gasless Mint (Facilitator Wallet)
-    ↓
-Tokens Sent to User Address
+User Experience Flow:
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   User Input    │ -> │  Payment Modal   │ -> │  Success Page   │
+│ BSC Address +   │    │ Connect Wallet + │    │ Transaction +   │
+│ Token Amount    │    │ Approve/Pay      │    │ BSCScan Link    │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+
+Technical Flow:
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │ -> │    Backend       │ -> │  Blockchain     │
+│ Wallet Connect  │    │ Payment Process  │    │ Gasless Mint    │
+│ Approval Check  │    │ USDT Transfer    │    │ Token Delivery  │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
 ## 🔧 Setup
@@ -64,34 +82,49 @@ npm run dev
 
 ## 📁 Key Files
 
-### Core Implementation
+### Core B402 Implementation
 
+- `src/lib/b402-facilitator.ts` - B402 gasless protocol implementation
 - `src/lib/facilitator.ts` - Core facilitator service for gasless transactions
-- `src/lib/mint-service.ts` - Token minting service
 - `src/lib/permit-signer.ts` - EIP-2612 permit signing utilities
-- `src/lib/supply.ts` - Token supply management
+- `src/lib/supply.ts` - Real-time token supply management
+- `src/hooks/useB402Payment.ts` - React hook for B402 payment flow
 
 ### API Routes
 
-- `src/app/api/purchase-gasless/route.ts` - Gasless purchase endpoint
-- `src/app/api/mint/allocation/route.ts` - Token allocation API
-- `src/app/api/mint/status/route.ts` - Mint status checking
-- `src/app/api/verify-payment/route.ts` - Payment verification
+- `src/app/api/gasless-approval/route.ts` - True gasless payment with approval
+- `src/app/api/purchase-gasless/route.ts` - Semi-gasless purchase endpoint
+- `src/app/api/verify-payment/route.ts` - Payment verification system
+- `src/app/api/mint/allocation/route.ts` - Token allocation tracking
+- `src/app/api/mint/status/route.ts` - Mint status and supply checking
 
-### Components
+### UI Components
 
-- `src/components/MintForm.tsx` - Main minting interface
-- `src/components/MintSuccess.tsx` - Success confirmation modal
-- `src/components/PaymentModal.tsx` - Payment processing modal
+- `src/components/MintForm.tsx` - Main minting interface with wallet detection
+- `src/components/PaymentModal.tsx` - Advanced payment processing modal
+- `src/components/BSCApprovalModal.tsx` - One-time approval interface
+- `src/components/PaymentInstructionsModal.tsx` - Manual payment instructions
+- `src/components/MintSuccess.tsx` - Success confirmation with BSCScan links
 
 ## 🔄 User Flow
 
-1. **Enter BSC Address**: User inputs their BSC wallet address
-2. **Select Package**: Choose token amount (100K, 500K, 1M, 5M MTK)
-3. **Payment Processing**: Backend handles USDT/USDC/USD1 payment
-4. **Gasless Mint**: Facilitator mints tokens without user gas fees
-5. **Token Delivery**: Tokens sent directly to user's address
-6. **Success Confirmation**: Transaction hash and details displayed
+### Option 1: Auto Wallet Detection
+
+1. **Wallet Auto-Connect**: App automatically detects connected wallet (MetaMask, etc.)
+2. **Select Package**: Choose from $1 (20 tokens) to $100 (2000 tokens)
+3. **Payment Modal**: Select payment token (USDT/USDC/USD1)
+4. **One-Time Approval**: Approve facilitator to spend tokens (first time only)
+5. **Gasless Payment**: Facilitator processes payment and mints tokens
+6. **Success**: Tokens delivered, transaction hash provided
+
+### Option 2: Manual Address Input
+
+1. **Connect Wallet**: Click "Connect Wallet" in payment modal
+2. **Select Package**: Choose token amount and payment method
+3. **Approve & Pay**: Single transaction for approval and payment
+4. **Gasless Mint**: Facilitator handles minting without user gas fees
+5. **Token Delivery**: Tokens sent directly to connected wallet
+6. **BSCScan Link**: View transaction on blockchain explorer
 
 ## 🛡️ Security
 
@@ -116,20 +149,81 @@ Make sure to set all required environment variables in your deployment platform.
 
 ## 💰 Token Packages
 
-| Package    | Tokens   | Price (USD) |
-| ---------- | -------- | ----------- |
-| Starter    | 100K MTK | $10         |
-| Popular    | 500K MTK | $45         |
-| Pro        | 1M MTK   | $85         |
-| Enterprise | 5M MTK   | $400        |
+| Package | Tokens   | Price (USD) | Rate            |
+| ------- | -------- | ----------- | --------------- |
+| Micro   | 20 MTK   | $1          | 0.05 USDT/token |
+| Small   | 100 MTK  | $5          | 0.05 USDT/token |
+| Medium  | 200 MTK  | $10         | 0.05 USDT/token |
+| Large   | 2000 MTK | $100        | 0.05 USDT/token |
+
+**Pricing**: 1 USDT = 20 MTK (0.05 USDT per token)  
+**Limits**: Min 1 token, Max 10,000 tokens per transaction
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+- **Next.js 16.0.1** with React 19.2.0
+- **TypeScript 5** for type safety
+- **Tailwind CSS 4** for styling
+- **Ethers.js 6.15.0** for blockchain interaction
+- **Lucide React** for icons
+
+### Backend
+
+- **Next.js API Routes** for serverless functions
+- **BSC Integration** via RPC endpoints
+- **Real Payment Processing** with USDT/USDC
+- **Gasless Transaction Handling**
+
+### Blockchain
+
+- **Binance Smart Chain (BSC)**
+- **MyToken.sol** - ERC20 with controlled distribution
+- **OpenZeppelin** contracts for security
+- **EIP-2612** permit signatures
+
+## 🎯 MyToken.sol Features
+
+### Token Distribution (1M Total Supply)
+
+- **5% Airdrop** (50K tokens) - Community building
+- **5% BAYC Community** (50K tokens) - NFT holder exclusive
+- **20% Liquidity Pool** (200K tokens) - DEX trading
+- **70% Public Mint** (700K tokens) - Available for purchase
+
+### Smart Contract Capabilities
+
+- **Multi-token Payments** (USDT, USDC, USD1)
+- **Gasless Minting** via facilitator
+- **Supply Management** with real-time tracking
+- **Security Features** (ReentrancyGuard, Ownable)
 
 ## 🔗 Features Comparison
 
-| Feature           | Traditional DApp     | This Implementation |
-| ----------------- | -------------------- | ------------------- |
-| Gas Fees          | User pays BNB        | Zero fees           |
-| Wallet Connection | Required             | Not needed          |
-| User Experience   | Multiple popups      | Single flow         |
-| Payment Methods   | Limited              | USDT/USDC/USD1      |
-| Speed             | Slow (confirmations) | Fast                |
-| Mobile Friendly   | Limited              | Fully responsive    |
+| Feature           | Traditional DApp   | B402 Implementation |
+| ----------------- | ------------------ | ------------------- |
+| Gas Fees          | User pays BNB      | **Zero fees** ✅    |
+| Wallet Connection | Always required    | **Optional** ✅     |
+| User Experience   | Multiple popups    | **Single flow** ✅  |
+| Payment Methods   | Limited to ETH/BNB | **Multi-token** ✅  |
+| Mobile Support    | Poor               | **Excellent** ✅    |
+| Automation Ready  | Difficult          | **Perfect** ✅      |
+| Speed             | Slow confirmations | **Instant** ✅      |
+
+## 🚀 Getting Started
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Copy environment variables: `cp .env.example .env.local`
+4. Configure your facilitator wallet and contract addresses
+5. Run development server: `npm run dev`
+6. Open [http://localhost:3000](http://localhost:3000)
+
+## 📊 Live Demo Features
+
+- **Real-time Supply Tracking** - See remaining tokens
+- **Anime-themed UI** - Beautiful background imagery
+- **Responsive Design** - Works on all devices
+- **BSCScan Integration** - View transactions on explorer
+- **Error Handling** - Clear feedback for all scenarios

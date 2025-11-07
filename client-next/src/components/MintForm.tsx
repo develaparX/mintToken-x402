@@ -16,7 +16,7 @@ export const MintForm = ({
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState("");
-  const [addressError, setAddressError] = useState("");
+  const [walletConnected, setWalletConnected] = useState(false);
 
   // Paket pembelian
   const packages = [
@@ -30,30 +30,32 @@ export const MintForm = ({
     getRemainingSupply()
       .then(setRemaining)
       .finally(() => setLoading(false));
+
+    // Check if wallet is already connected
+    checkWalletConnection();
   }, []);
 
-  const validateAddress = (address: string) => {
-    if (!address.trim()) {
-      setAddressError("Please enter your BSC address");
-      return false;
+  const checkWalletConnection = async () => {
+    try {
+      if (typeof window !== "undefined" && (window as any).ethereum) {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const accounts = await provider.listAccounts();
+
+        if (accounts.length > 0) {
+          const address = await accounts[0].getAddress();
+          setRecipientAddress(address);
+          setWalletConnected(true);
+        }
+      }
+    } catch (error) {
+      console.log("No wallet connected");
     }
-    if (!ethers.isAddress(address)) {
-      setAddressError("Invalid BSC address format");
-      return false;
-    }
-    setAddressError("");
-    return true;
   };
 
   const handlePackageSelect = (pkg: (typeof packages)[0], index: number) => {
     if (remaining === 0) return;
     if (pkg.tokens > remaining) {
       alert(`Hanya tersisa ${remaining} token.`);
-      return;
-    }
-
-    // Validate address before proceeding
-    if (!validateAddress(recipientAddress)) {
       return;
     }
 
@@ -83,29 +85,32 @@ export const MintForm = ({
         </h1>
       </div>
 
-      {/* BSC Address Input */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Your BSC Address (where tokens will be sent):
-        </label>
-        <input
-          type="text"
-          value={recipientAddress}
-          onChange={(e) => {
-            setRecipientAddress(e.target.value);
-            if (addressError) setAddressError("");
-          }}
-          placeholder="0x1234567890123456789012345678901234567890"
-          className={`w-full px-4 py-3 bg-black/50 backdrop-blur-sm border text-white placeholder-gray-500 focus:outline-none transition-all rounded-md ${
-            addressError
-              ? "border-red-500 focus:border-red-400"
-              : "border-gray-700 focus:border-purple-500"
-          }`}
-        />
-        {addressError && (
-          <p className="mt-2 text-sm text-red-400">{addressError}</p>
-        )}
-      </div>
+      {/* Wallet Status */}
+      {walletConnected && (
+        <div className="mb-4">
+          <div className="bg-green-900/20 border border-green-500/30 rounded-md p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center text-green-300 text-sm font-medium mb-1">
+                  ✅ Wallet Connected
+                </div>
+                <div className="text-xs text-gray-300 font-mono break-all">
+                  {recipientAddress}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setWalletConnected(false);
+                  setRecipientAddress("");
+                }}
+                className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 mb-4">
         {packages.map((pkg, index) => {

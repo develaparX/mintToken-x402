@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useB402Payment } from "@/hooks/useB402Payment";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { BSCApprovalModal } from "./BSCApprovalModal";
 import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
+import { ethers } from "ethers";
 
 interface PaymentModalProps {
   mintAmount: number;
@@ -27,6 +28,9 @@ export const PaymentModal = ({
   const [paymentInstructions, setPaymentInstructions] = useState<any>(null);
   const [approvalData, setApprovalData] = useState<any>(null);
   const [useTrueGasless, setUseTrueGasless] = useState(true); // Default to true gasless
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [connectingWallet, setConnectingWallet] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState("");
   const {
     status,
     error,
@@ -51,14 +55,81 @@ export const PaymentModal = ({
 
   const isProcessing = status !== "idle" && status !== "error";
 
+  useEffect(() => {
+    checkWalletConnection();
+  }, []);
+
+  const checkWalletConnection = async () => {
+    try {
+      if (typeof window !== "undefined" && (window as any).ethereum) {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const accounts = await provider.listAccounts();
+
+        if (accounts.length > 0) {
+          const address = await accounts[0].getAddress();
+          setCurrentAddress(address);
+          setWalletConnected(true);
+        }
+      }
+    } catch (error) {
+      console.log("No wallet connected");
+    }
+  };
+
+  const connectWallet = async () => {
+    try {
+      setConnectingWallet(true);
+
+      if (typeof window === "undefined" || !(window as any).ethereum) {
+        throw new Error("Please install MetaMask or another Web3 wallet");
+      }
+
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+
+      // Request account access
+      await (window as any).ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+
+      setCurrentAddress(address);
+      setWalletConnected(true);
+    } catch (error: any) {
+      console.log(
+        "Wallet connection failed:",
+        error?.message || error?.code || "Unknown error"
+      );
+
+      // Handle specific error cases
+      if (error?.code === 4001) {
+        console.log("User rejected wallet connection");
+      } else if (error?.code === -32002) {
+        console.log("Wallet connection request already pending");
+      }
+    } finally {
+      setConnectingWallet(false);
+    }
+  };
+
   const handlePayment = async () => {
+    // If wallet not connected, connect first
+    if (!walletConnected) {
+      await connectWallet();
+      return;
+    }
+
     try {
       reset();
+
+      // Use connected wallet address instead of recipientAddress
+      const targetAddress = currentAddress || recipientAddress;
 
       if (useTrueGasless) {
         // True Gasless: User approves once, facilitator pays gas for transfer + mint
         const result = await processTrueGaslessPayment(
-          recipientAddress,
+          targetAddress,
           selectedToken,
           mintAmount // Token amount user receives
         );
@@ -73,12 +144,12 @@ export const PaymentModal = ({
         // Success callback
         onSuccess({
           txHash: result.txHash,
-          address: recipientAddress,
+          address: targetAddress,
         });
       } else {
         // Semi-gasless: User transfers USDT manually, facilitator pays mint gas
         const result = await processGaslessPayment(
-          recipientAddress,
+          targetAddress,
           selectedToken,
           totalPrice.toString(), // USDT amount user pays
           mintAmount // Token amount user receives
@@ -94,7 +165,7 @@ export const PaymentModal = ({
         // Success callback
         onSuccess({
           txHash: result.txHash,
-          address: recipientAddress,
+          address: targetAddress,
         });
       }
     } catch (error: any) {
@@ -107,9 +178,12 @@ export const PaymentModal = ({
     try {
       setShowPaymentInstructions(false);
 
+      // Use connected wallet address
+      const targetAddress = currentAddress || recipientAddress;
+
       // Continue with payment verification and token minting
       const result = await continueAfterPayment(
-        recipientAddress,
+        targetAddress,
         selectedToken,
         mintAmount,
         paymentInstructions
@@ -118,7 +192,7 @@ export const PaymentModal = ({
       // Success callback
       onSuccess({
         txHash: result.txHash,
-        address: recipientAddress,
+        address: targetAddress,
       });
     } catch (error: any) {
       console.error("Payment continuation failed:", error);
@@ -137,9 +211,12 @@ export const PaymentModal = ({
     try {
       setShowBSCApprovalModal(false);
 
+      // Use connected wallet address
+      const targetAddress = currentAddress || recipientAddress;
+
       // Continue with gasless payment after approval
       const result = await continueAfterApproval(
-        recipientAddress,
+        targetAddress,
         selectedToken,
         mintAmount,
         txHash
@@ -148,7 +225,7 @@ export const PaymentModal = ({
       // Success callback
       onSuccess({
         txHash: result.txHash,
-        address: recipientAddress,
+        address: targetAddress,
       });
     } catch (error: any) {
       console.error("Payment continuation after approval failed:", error);
@@ -262,14 +339,35 @@ export const PaymentModal = ({
               </div>
             </div>
 
+            {/* Wallet Status */}
+            {walletConnected && (
+              <div className="mb-4 p-3 bg-green-900/20 border border-green-500/30 rounded">
+                <div className="flex items-center text-green-300 text-sm font-medium mb-1">
+                  ✅ Wallet Connected
+                </div>
+                <div className="text-xs text-gray-300 font-mono break-all">
+                  {currentAddress}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handlePayment}
-              disabled={isProcessing}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-4 rounded transition-all duration-200 hover:scale-105"
+              disabled={isProcessing || connectingWallet}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-4 rounded transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {useTrueGasless
-                ? `🚀 Pay ${totalPrice} ${selectedToken} (Zero Gas!)`
-                : `⚡ Pay ${totalPrice} ${selectedToken} (Semi-Gasless)`}
+              {connectingWallet ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Connecting Wallet...
+                </>
+              ) : !walletConnected ? (
+                <>🔗 Connect Wallet</>
+              ) : useTrueGasless ? (
+                `🚀 Pay ${totalPrice} ${selectedToken} (Zero Gas!)`
+              ) : (
+                `⚡ Pay ${totalPrice} ${selectedToken} (Semi-Gasless)`
+              )}
             </button>
           </>
         )}

@@ -103,7 +103,7 @@ function App() {
       <section
         className="relative h-screen flex items-center justify-center px-4"
         style={{
-          backgroundImage: "url(/bg.jpg)",
+          backgroundImage: "url(/anime-bg.jpg)",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

@@ -76,19 +76,66 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/40 via-transparent to-blue-900/40"></div>
       </div>
 
+      {/* Navigation Header */}
+
+      {/*<nav className="fixed top-0 left-0 right-0 z-30 bg-black/20 backdrop-blur-sm border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <img src="/logo.png" alt="MyToken" className="w-8 h-8 mr-3" />
+              <span className="text-white font-bold text-lg">MyToken</span>
+            </div>
+
+            <div className="flex items-center space-x-6">
+              <a
+                href="#airdrop"
+                className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document
+                    .querySelector("#airdrop")
+                    ?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                Airdrop
+              </a>
+              <a
+                href="#mint"
+                className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document
+                    .querySelector("#mint")
+                    ?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                Mint
+              </a>
+              <a
+                href="/holders"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+              >
+                👥 Holders
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>*/}
+
       {/* B402 Gasless Badge */}
-      <div className="fixed top-4 right-4 z-20">
+      {/* <div className="fixed top-4 right-4 z-20">
         <div className="bg-gradient-to-r from-green-500 to-blue-500 px-4 py-2 rounded-lg border-2 border-white/20 backdrop-blur-sm">
           <div className="text-white font-bold text-sm">⚡ GASLESS</div>
           <div className="text-white/80 text-xs">No wallet needed</div>
         </div>
-      </div>
+      </div> */}
 
       {/* Airdrop Section - Full Screen */}
       <section
+        id="airdrop"
         className="relative h-screen flex items-center justify-center px-4"
         style={{
-          backgroundImage: "url(/bg.jpg)",
+          backgroundImage: "url(/anime-bg.jpg)",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -201,7 +248,17 @@ export default function Home() {
       </section>
 
       {/* Mint Section - Full Screen */}
-      <section className="relative h-screen flex items-center justify-center px-4">
+      <section
+        id="mint"
+        className="relative h-screen flex items-center justify-center px-4"
+        style={{
+          backgroundImage: "url(/anime-bg-2.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/60"></div>
         {/* Konten utama (form atau success) */}
         <div className="max-w-2xl w-full z-10">
           <div className="bg-white/5 backdrop-blur-lg rounded-sm py-8 px-6 border border-white/10 shadow-2xl">
