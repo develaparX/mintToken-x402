@@ -60,7 +60,7 @@ export default function HoldersPage() {
 
       // Sort by balance (highest first)
       processedHolders.sort(
-        (a, b) =>
+        (a: HolderData, b: HolderData) =>
           parseFloat(b.balanceFormatted) - parseFloat(a.balanceFormatted)
       );
 
